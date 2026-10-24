@@ -1,59 +1,274 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# BUKO · Gestión empresarial
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+BUKO es un sistema de gestión empresarial modular. Su base organiza empresas, sucursales, usuarios y accesos para incorporar nuevas funciones de negocio sin duplicar la lógica de autorización ni mezclar los datos de distintas empresas.
 
-## About Laravel
+La aplicación utiliza Laravel y vistas Blade, con PostgreSQL como base de datos. Las páginas y formularios se renderizan en el servidor; cada módulo incluye su propio JavaScript para las interacciones que necesita. Las búsquedas y la paginación actualizan únicamente los resultados mediante `fetch`.
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+El alcance actual es la base administrativa y de seguridad. Nómina es una posible siguiente etapa; todavía no está implementada.
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## Funcionalidades actuales
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+| Área | Funcionalidad |
+| --- | --- |
+| Autenticación | Login inicial con correo y contraseña, sesión, cierre de sesión y límite de intentos |
+| Empresas | Información general, estado y habilitación de módulos por empresa |
+| Sucursales | Sucursales asociadas a su empresa mediante `company_id` |
+| Usuarios | Una empresa por usuario operativo, roles y permisos individuales |
+| Roles y permisos | Roles por empresa y concesiones acumulativas, con límites de delegación |
+| Estados | Catálogo agrupado por módulo/contexto; nombres editables y control de operación mediante `is_active` |
+| Menús | Creación, edición y eliminación desde backoffice; padres, hijos, iconos, orden, acción inicial y estado |
+| Historial y eliminación | Borrado lógico en seis módulos; cronología con actor, fecha y cambios antes/después |
+| Interfaz | Tema claro/oscuro, fuentes e iconos locales, modales accesibles y lateral adaptable a móvil |
 
-## Learning Laravel
+Todos los listados incluyen buscador, filtros según su contenido, selector de filas y paginador con total. Búsquedas, filtros y cambios de página actualizan el contenido mediante `fetch`, manteniendo limpia la dirección del navegador.
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework. You can also check out [Laravel Learn](https://laravel.com/learn), where you will be guided through building a modern Laravel application.
+El superadministrador global no pertenece a una empresa y administra la configuración del sistema. Un administrador de empresa es un usuario con los permisos correspondientes; su rol no le concede acceso a otras empresas.
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+## Capturas
 
-## Laravel Sponsors
+Las imágenes se guardan en [`docs/images`](docs/images) y se muestran mediante rutas relativas. No requieren alojamiento externo. Son capturas de las vistas Blade en el entorno local; las comprobaciones del historial utilizan datos de demostración aislados en SQLite en memoria.
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+### Administración de menús
 
-### Premium Partners
+![Backoffice de BUKO con navegación lateral y acciones de edición y eliminación de menús](docs/images/menus-backoffice.png)
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+<details>
+<summary>Ver formulario breve en modal: edición de estado</summary>
 
-## Contributing
+![Edición de un estado en un modal sobre su listado, con nombre, disponibilidad y acciones](docs/images/status-modal.png)
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+</details>
 
-## Code of Conduct
+<details>
+<summary>Ver indicadores uniformes e historial de cambios</summary>
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+![Estados agrupados con indicadores Sí/No de dimensiones idénticas y acciones uniformes](docs/images/statuses-lifecycle.png)
 
-## Security Vulnerabilities
+![Historial con responsable, fecha y diferencias antes y después](docs/images/record-history.png)
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+</details>
 
-## License
+## Tecnologías
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+| Componente | Tecnología |
+| --- | --- |
+| Backend | PHP 8.2+ y Laravel 12 |
+| Vistas | Blade y componentes Blade reutilizables |
+| Base de datos | PostgreSQL 18 |
+| Estilos | Tailwind CSS 4 y tokens de diseño propios |
+| Interacción | JavaScript nativo, `fetch`, Web Animations API y `<dialog>` |
+| Assets | Vite 7, entradas independientes por módulo |
+| Tipografía | IBM Plex Sans autoalojada, pesos 400/500/600 |
+| Iconografía | SVG locales de Tabler |
+| Pruebas y formato | PHPUnit 11 y Laravel Pint |
+
+La interfaz no depende de Vue, React ni de recursos servidos desde un CDN. Los controladores, Form Requests y servicios mantienen en Laravel las reglas de negocio y autorización.
+
+## Ejecución local
+
+El entorno de desarrollo utiliza Wamp y la URL:
+
+```text
+http://localhost/buko/public/
+```
+
+La raíz muestra el login; después de autenticarse se accede a `/inicio`. Se utilizan Apache y la configuración existente del equipo. Con los assets compilados no hace falta mantener `php artisan serve` ni un servidor Vite en ejecución.
+
+Vite compila con base relativa `./`: las fuentes, imágenes e imports internos siguen la ubicación del CSS/JavaScript y funcionan bajo `/buko/public/`. No se requieren cambios de Wamp ni enlaces a `/build/` desde la raíz de `localhost`.
+
+### Requisitos
+
+- PHP 8.2+ con las extensiones requeridas por Laravel y `pdo_pgsql` activo en el PHP que atiende la web y en el de consola.
+- PostgreSQL 18 y una base de datos creada para el proyecto.
+- Composer 2.
+- Node.js 22.12+ y npm para compilar los assets. La configuración de Vite utiliza `globSync` de Node.
+- Permiso de escritura de la aplicación sobre `storage` y `bootstrap/cache`.
+
+### Preparar una copia nueva
+
+Estos pasos son para una instalación nueva; no sobrescribas el `.env` ni regeneres la clave de una instalación existente.
+
+```powershell
+composer install
+Copy-Item .env.example .env
+php artisan key:generate
+npm ci
+```
+
+Configura tu conexión en `.env`. El ejemplo del repositorio utiliza el puerto local `5433`; conserva el que corresponda a tu PostgreSQL:
+
+```dotenv
+APP_NAME=BUKO
+APP_URL=http://localhost/buko/public
+APP_LOCALE=es
+DB_CONNECTION=pgsql
+DB_HOST=127.0.0.1
+DB_PORT=5433
+DB_DATABASE=buko
+DB_USERNAME=postgres
+DB_PASSWORD=
+```
+
+Las migraciones y los seeders se ejecutan manualmente:
+
+```powershell
+php artisan migrate
+php artisan db:seed
+npm run build
+```
+
+Las migraciones existentes son **inmutables**. Los cambios de esquema y las incorporaciones de catálogos para instalaciones existentes se entregan en migraciones nuevas e incrementales. No se utiliza `migrate:fresh` sobre la base de desarrollo.
+
+Para preparar el entorno paso a paso se usan los comandos anteriores. El script heredado `composer run setup` ejecuta migraciones automáticamente y no corresponde al flujo manual del proyecto.
+
+### Acceso inicial y configuración
+
+El seeder crea los catálogos iniciales y el superadministrador a partir de `BUKO_ADMIN_NAME`, `BUKO_ADMIN_EMAIL` y `BUKO_ADMIN_PASSWORD`. Consulta los valores de desarrollo en [`.env.example`](.env.example). Repetir el seeder no restablece la contraseña de una cuenta existente; cambiar la variable de entorno tampoco actualiza una cuenta ya creada.
+
+El desplegable de credenciales del login aparece únicamente con `APP_ENV=local` y `BUKO_SHOW_LOCAL_CREDENTIALS=true`. Las credenciales iniciales son para desarrollo. `.env` no se versiona.
+
+La configuración inicial usa sesiones y caché en archivos, colas síncronas y correo mediante log. Redis y un trabajador de colas no son requisitos para esta etapa.
+
+## Arquitectura y organización
+
+Los controladores coordinan HTTP. Los Form Requests validan y autorizan las entradas. Los servicios concretos resuelven las operaciones de negocio y las transacciones. Eloquent representa los modelos y sus relaciones, sin capas de repositorios o interfaces añadidas por rutina.
+
+```text
+app/
+  Http/
+    Controllers/Auth/          Login y cierre de sesión
+    Controllers/Management/    Controladores de los módulos administrativos
+    Middleware/                Estado de cuenta y controles de acceso
+    Requests/Management/       Validación y autorización de formularios
+  Models/                      Entidades y relaciones por ID
+  Services/
+    Access/                    Permisos, delegación y aislamiento por empresa
+    Auth/                      Autenticación
+    Management/                Escrituras y transacciones por recurso
+    Navigation/                Catálogo seguro y filtrado del menú
+  Support/                     AsyncResponse y ListingResponse
+resources/
+  views/
+    layouts/partials/          Head, header, navbar, topbar y footer
+    components/                Campos, botones, estados, modales y vacíos
+    modules/{modulo}/          Vistas y partials de cada módulo
+  js/
+    modules/{modulo}/          Entradas JavaScript independientes
+    shared/                    Transporte, navegación, formularios y shell
+  css/                         Tokens, estilos base y componentes compartidos
+database/
+  migrations/                  Evolución incremental del esquema
+  seeders/                     Catálogos y cuenta inicial
+tests/
+  Feature/                     Contratos HTTP, seguridad y comportamiento
+  Manual/                      Comprobaciones explícitas contra PostgreSQL local
+```
+
+### Relaciones y aislamiento
+
+Todas las relaciones del dominio se almacenan mediante IDs con claves foráneas. Los nombres y códigos sirven para mostrar o localizar un registro, nunca para enlazar tablas.
+
+| Relación | Implementación |
+| --- | --- |
+| Empresa → sucursales, usuarios y roles | `company_id` |
+| Empresa ↔ módulos habilitados | Pivote `company_module`, con `company_id` y `module_id` |
+| Usuario ↔ roles | Pivote `role_user`, con `user_id` y `role_id` |
+| Rol ↔ permisos | Pivote `permission_role`, con `role_id` y `permission_id` |
+| Usuario ↔ permisos directos | Pivote `permission_user`, con `user_id` y `permission_id` |
+| Estado → tipo de estado | `status_type_id` |
+| Entidad → estado | `status_id` |
+| Menú → padre, módulo, permiso y estado | `parent_id`, `module_id`, `permission_id` y `status_id` |
+
+El usuario operativo pertenece a una sola empresa. El superadministrador tiene `company_id = null`. No se trasladan usuarios ni roles entre empresas desde sus formularios de edición.
+
+### Autorización
+
+Se distinguen tres conceptos:
+
+1. **Configuración del sistema:** permisos con `module_id` nulo, reservados al ámbito global.
+2. **Módulos de empresa:** funciones habilitadas mediante `company_module`.
+3. **Permisos del usuario:** concesiones directas y de roles pertenecientes a su misma empresa.
+
+Para un usuario de empresa se exige cuenta activa, empresa activa, módulo habilitado y permiso concedido. Tener un rol o permiso directo no activa un módulo deshabilitado; habilitar el módulo tampoco concede por sí solo permisos a todos los usuarios.
+
+Las rutas y las operaciones se autorizan en servidor, además de filtrar el menú. Las lecturas, escrituras y asignaciones de relaciones comprueban la empresa. Una cuenta no puede delegar permisos fuera de su alcance ni modificar una cuenta más privilegiada. `is_super_admin` no es asignable desde formularios.
+
+Las revocaciones se aplican en la siguiente petición. Desactivar una empresa termina las sesiones de sus usuarios cuando vuelven a realizar una petición.
+
+### Menú administrable
+
+El menú es un catálogo global cuya visibilidad se filtra para cada usuario y empresa. Los padres agrupan opciones y no ejecutan acciones; los hijos pertenecen a un padre mediante `parent_id`.
+
+El destino se elige del catálogo de rutas GET registradas en `NavigationRegistry`. El formulario muestra el controlador y su acción; el servidor deriva `module_id` y `permission_id`. No interpreta PHP, nombres de clases ni URLs arbitrarias guardados en la base.
+
+Un padre con hijos no puede eliminarse ni convertirse en hoja hasta mover o eliminar sus hijos. Eliminar una entrada cambia la navegación y conserva los datos del módulo. Agregar un menú no implementa una nueva función de negocio: primero deben existir su código, ruta y permiso registrados.
+
+## Vistas, navegación e interacción
+
+- Las vistas se renderizan con Blade. Empresas, usuarios y roles tienen formularios amplios en páginas propias; estados, sucursales y menús se crean y editan en modales.
+- Cada formulario modal está en la carpeta `partials/` de su módulo y se incluye en templates HTML locales. Blade renderiza la acción, el método y todos los valores del registro. JavaScript solo clona ese HTML en el modal, sin fetch al abrir ni hidratación de campos desde JSON. La confirmación de borrado sigue el mismo patrón.
+- La navegación entre módulos y formularios largos es la normal de Laravel/Blade. No hay router de JavaScript, carga dinámica del shell, fade de página ni espera de salida antes de navegar.
+- Cada vista interactiva declara su entrada mediante `@section('module', 'resources/js/modules/{modulo}/index.js')`; el layout incluye ese script directamente con Vite.
+- El formulario de búsqueda y los enlaces del paginador se atienden mediante `fetch`. `ListingResponse` devuelve solo el fragmento Blade `list-results` al recibir `X-Buko-Listing: true`. Los filtros se aplican en servidor y los resultados cambian sin alterar la dirección ni el historial del navegador. Los enlaces GET quedan como alternativa sin JavaScript.
+- Los datos editables se imprimen con el escape de Blade, también dentro de valores y atributos. Las URLs de acciones se generan mediante rutas del servidor. No se evalúan scripts ni se concatenan datos de usuario para construir formularios.
+- Los modales conservan el foco, admiten Escape y muestran errores por campo. Los errores aparecen tras el primer blur o envío, con corrección posterior.
+- Las microinteracciones son rápidas y discretas, respetan `prefers-reduced-motion` y no retrasan el uso del teclado.
+- Los indicadores Sí/No comparten ancho y alto fijos; badges, paneles y acciones usan componentes y dimensiones comunes en todos los módulos.
+
+## Borrado lógico e historial
+
+Empresas, sucursales, usuarios, roles, estados y menús incluyen **Eliminar** con confirmación. Usan `SoftDeletes` y conservan el registro, sus IDs y relaciones. Los eliminados quedan fuera de los listados, opciones y autorización operativos. Un estado referenciado no se elimina; tampoco se permite eliminar la propia cuenta, el superadministrador o recursos fuera del alcance del actor.
+
+El estado base se consulta mediante `lifecycle_status`: **1 activo, 0 inactivo, -1 eliminado**. Se deriva de `deleted_at` y de la disponibilidad del estado. `status_id` conserva su función de clave foránea; los futuros estados de facturación u otros procesos mantienen su comportamiento de negocio.
+
+El historial registra creación, cambios y eliminación con actor, fecha y diferencias antes/después. Se guarda dentro de la misma transacción e incluye asignaciones de módulos, roles y permisos. No guarda contraseñas, hashes ni tokens; solo indica si se actualizó una contraseña. No se generan eventos para guardados sin cambios ni se inventa historial anterior.
+
+Los formularios de edición muestran los últimos cambios. Cada fila ofrece acceso al historial completo, paginado y filtrable, y la confirmación tras guardar o eliminar incluye **Ver historial**. Su acceso respeta los permisos y la empresa, también para registros eliminados.
+
+Para incorporar estas funciones en una instalación existente, ejecuta manualmente `php artisan migrate`. La migración incremental `2026_10_24_055321_add_soft_deletes_and_audit_entries.php` agrega `deleted_at` y `audit_entries`; las migraciones entregadas anteriormente permanecen intactas.
+
+La paleta base es `#c0e6fd`, `#80aad3`, `#5b86b6`, `#3f6593`, `#1b3554` y `#000f22`. Los tokens se centralizan en `resources/css/app.css`; los componentes compartidos del espacio de trabajo, en `resources/css/components/workspace.css`.
+
+## Contrato de respuestas asíncronas
+
+Todas las llamadas `fetch` utilizan `resources/js/shared/http.js` y el mismo sobre:
+
+```json
+{
+  "success": true,
+  "message": "Cambios guardados correctamente.",
+  "data": { "redirect": "http://localhost/buko/public/menus" },
+  "errors": {},
+  "meta": {}
+}
+```
+
+Los fallos usan `success: false` y conservan su código HTTP: autenticación `401`, autorización `403`, registro inexistente `404`, sesión/CSRF `419`, validación `422`, límite de intentos `429` y error interno `500`. Los mensajes por campo se entregan en `errors`; los errores inesperados no exponen información interna.
+
+El transporte comparte CSRF, `Accept: application/json` y credenciales del mismo origen. Los formularios evitan envíos duplicados y conservan sus valores ante errores de validación o red.
+
+## Verificación
+
+La suite automática usa SQLite en memoria, separada de PostgreSQL local. Incluye autenticación, aislamiento de empresas, escalamiento de privilegios, revocación de permisos y módulos, CRUD de menús, modales Blade, escape de datos y contrato de listados asíncronos.
+
+```powershell
+php vendor/phpunit/phpunit/phpunit
+php vendor/bin/pint --test app/Http app/Models app/Services app/Support routes tests
+npm run build
+```
+
+La comprobación manual de PostgreSQL está fuera de la suite automática. Solo debe ejecutarse de forma explícita contra la conexión local ya preparada; no migra, no ejecuta seeders y revierte sus datos de prueba mediante transacciones:
+
+```powershell
+php vendor/phpunit/phpunit/phpunit --no-configuration --bootstrap vendor/autoload.php tests/Manual/PostgresNavigationSmokeTest.php
+```
+
+No se debe ejecutar `RefreshDatabase`, `migrate:fresh` ni una reconstrucción de tablas contra la base local de trabajo.
+
+## Continuar el desarrollo
+
+Antes de crear o modificar un módulo, consulta [AGENTS.md](AGENTS.md). Allí se definen las reglas obligatorias de arquitectura, relaciones por ID, autorización, formularios, recursos locales, navegación, accesibilidad y verificación.
+
+La [guía de la base de BUKO](docs/BASE_BUKO.md) amplía el modelo de datos, el flujo inicial de administración y las decisiones pendientes. Entre ellas están los permisos por operación, el alcance por sucursal y los flujos de perfil, recuperación y segundo factor. La auditoría inicial de cambios administrativos ya está implementada.
+
+Las licencias de recursos autoalojados se conservan en [`public/licenses`](public/licenses): [IBM Plex Sans](public/licenses/IBM-Plex-Sans-OFL.txt) y [Tabler Icons](public/licenses/Tabler-Icons-MIT.txt).

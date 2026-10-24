@@ -1,0 +1,1 @@
+<x-delete-confirmation :action="route('statuses.destroy', $record)" :name="$record->name" label="estado" description="Los estados vinculados a otros registros deben conservarse. Puedes desactivarlos para impedir su uso operativo." />
