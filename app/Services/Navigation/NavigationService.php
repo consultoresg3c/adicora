@@ -48,7 +48,12 @@ class NavigationService
         })->each(function (MenuItem $item) use ($request) {
             $item->setAttribute('url', route($item->route_name));
             $pattern = $item->route_name === 'dashboard' ? 'dashboard' : str($item->route_name)->beforeLast('.').'.*';
-            $item->setAttribute('active', $request->routeIs($pattern) || $request->attributes->get('navigation_route') === $item->route_name);
+            $patterns = match ($item->route_name) {
+                'purchases.tracking' => ['purchases.tracking'],
+                'purchases.index' => ['purchases.index', 'purchases.create', 'purchases.show'],
+                default => [$pattern],
+            };
+            $item->setAttribute('active', $request->routeIs(...$patterns) || $request->attributes->get('navigation_route') === $item->route_name);
         });
 
         return $items->where('is_parent', true)->filter(function (MenuItem $parent) use ($leaves) {

@@ -59,7 +59,7 @@ class ShortFormModalTest extends TestCase
         $status = $this->statusFor('users');
         $status->update(['name' => '<script>alert("estado")</script>']);
 
-        $this->actingAs($admin)->get('/estados')
+        $this->actingAs($admin)->get('/estados?per_page=50')
             ->assertSee('id="create-status"', false)->assertSee('id="edit-status-'.$status->id.'"', false)
             ->assertSee('data-dialog-template="edit-status-'.$status->id.'"', false)
             ->assertSee('name="name"', false)->assertSee('name="status_type_id"', false)

@@ -28,7 +28,7 @@ class StatusListingTest extends TestCase
         $admin = $this->foundation();
         $types = StatusType::orderBy('id')->get();
 
-        $response = $this->actingAs($admin)->get('/estados');
+        $response = $this->actingAs($admin)->get('/estados?per_page=50');
 
         $response->assertViewHas('groups', function ($groups) use ($types): bool {
             return $groups->keys()->all() === $types->pluck('id')->all()

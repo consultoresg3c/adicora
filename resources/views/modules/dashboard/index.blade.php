@@ -13,6 +13,9 @@
     @can('organization.branches.manage')<a class="workspace-link" href="{{ route('branches.index') }}"><div><h3>Sucursales</h3><p>Ubicaciones que forman parte de cada empresa.</p></div><span aria-hidden="true">↗</span></a>@endcan
     @can('access.users.manage')<a class="workspace-link" href="{{ route('users.index') }}"><div><h3>Usuarios</h3><p>Cuentas, roles y permisos individuales.</p></div><span aria-hidden="true">↗</span></a>@endcan
     @can('access.roles.manage')<a class="workspace-link" href="{{ route('roles.index') }}"><div><h3>Roles y permisos</h3><p>Accesos compartidos por los miembros del equipo.</p></div><span aria-hidden="true">↗</span></a>@endcan
+    @can('purchases.requests.work')<a class="workspace-link" href="{{ route('purchases.index') }}"><div><h3>Pendientes de compras</h3><p>Solicitudes que esperan tu intervención.</p></div><span aria-hidden="true">↗</span></a>
+    <a class="workspace-link" href="{{ route('purchases.tracking') }}"><div><h3>Tracking de solicitudes</h3><p>Avance de las solicitudes en las que has trabajado.</p></div><span aria-hidden="true">↗</span></a>@endcan
+    @can('purchases.suppliers.manage')<a class="workspace-link" href="{{ route('suppliers.index') }}"><div><h3>Proveedores</h3><p>Catálogo de proveedores de la empresa.</p></div><span aria-hidden="true">↗</span></a>@endcan
     @can('system.statuses.manage')<a class="workspace-link" href="{{ route('statuses.index') }}"><div><h3>Estados</h3><p>Catálogo dinámico para empresas, sucursales y usuarios.</p></div><span aria-hidden="true">↗</span></a>@endcan
 </section>
 @endsection

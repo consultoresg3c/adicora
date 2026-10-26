@@ -17,7 +17,9 @@ El alcance actual es la base administrativa y de seguridad. Nómina es una posib
 | Roles y permisos | Roles por empresa y concesiones acumulativas, con límites de delegación |
 | Estados | Catálogo agrupado por módulo/contexto; nombres editables y control de operación mediante `is_active` |
 | Menús | Creación, edición y eliminación desde backoffice; padres, hijos, iconos, orden, acción inicial y estado |
-| Historial y eliminación | Borrado lógico en seis módulos; cronología con actor, fecha y cambios antes/después |
+| Procesos | Nombre del proceso y secuencia por empresa en una tabla de origen, destino, rol y estatus de resultado; gestión de etapas y reconexión automática |
+| Compras | Proveedores por empresa, solicitudes en USD, etapas por rol, pendientes y tracking por participación personal |
+| Historial y eliminación | Borrado lógico en los módulos administrativos; cronología con actor, fecha y cambios antes/después |
 | Interfaz | Tema claro/oscuro, fuentes e iconos locales, modales accesibles y lateral adaptable a móvil |
 
 Todos los listados incluyen buscador, filtros según su contenido, selector de filas y paginador con total. Búsquedas, filtros y cambios de página actualizan el contenido mediante `fetch`, manteniendo limpia la dirección del navegador.
@@ -272,3 +274,31 @@ Antes de crear o modificar un módulo, consulta [AGENTS.md](AGENTS.md). Allí se
 La [guía de la base de BUKO](docs/BASE_BUKO.md) amplía el modelo de datos, el flujo inicial de administración y las decisiones pendientes. Entre ellas están los permisos por operación, el alcance por sucursal y los flujos de perfil, recuperación y segundo factor. La auditoría inicial de cambios administrativos ya está implementada.
 
 Las licencias de recursos autoalojados se conservan en [`public/licenses`](public/licenses): [IBM Plex Sans](public/licenses/IBM-Plex-Sans-OFL.txt) y [Tabler Icons](public/licenses/Tabler-Icons-MIT.txt).
+
+### Procesos y etapas
+
+La migración incremental `2026_10_26_000001_create_process_catalog.php` crea los pasos, las etapas, sus estados por contexto, las referencias de auditoría y la entrada **Sistema → Procesos**. Debe aplicarla el responsable del entorno con `php artisan migrate`; no requiere repetir seeders. No modifica migraciones anteriores ni asigna permisos a roles o usuarios existentes.
+
+`system.processes.manage` es un permiso global: inicialmente solo accede el superadministrador; se puede delegar explícitamente a roles globales. Un usuario de empresa no obtiene acceso aunque reciba ese permiso. Desde **Gestionar etapas** se crean las etapas (nombre y estatus); después se registran los pasos con origen, destino, estatus y rol responsable. Los roles se distinguen por empresa o ámbito global, sin concederles acceso a Procesos por ser responsables. Origen y destino deben ser diferentes. El módulo Compras utiliza esta configuración para avanzar solicitudes; asignar un rol a una etapa no concede por sí solo permisos ni habilita el módulo.
+
+Los formularios breves y sus confirmaciones usan modales Blade locales. Pasos y etapas conservan historial y borrado lógico. Una etapa referenciada por un paso vigente o eliminado no se elimina; puede desactivarse. Los roles eliminados y los de empresas eliminadas no se ofrecen para nuevas asignaciones; los pasos conservan sus referencias históricas. Los estados referenciados tampoco pueden eliminarse.
+
+### Flujo operativo de compras
+
+Compras incorpora **Pendientes**, **Tracking de solicitudes** y **Proveedores**. El monto utiliza USD y dos decimales. Se omite Desembolso: Solicitud de compra → Aprobación nivel 1 → Recepción y verificación → Pago. Las fechas se ingresan manualmente y no pueden preceder la fecha de la etapa anterior.
+
+Todos consultan proveedor, monto y fechas. El comprador completa proveedor, fecha de compra y monto; el aprobador completa fecha de aprobación; el receptor completa fecha de recepción; el pagador completa fecha de pago. Guardar conserva la etapa; completar y enviar aplica su estatus de resultado y entrega al siguiente rol. Pago finaliza la solicitud. No se incluyen rechazos, devoluciones, cancelaciones ni pagos parciales.
+
+La bandeja solo incluye pendientes del rol y la empresa del usuario. El tracking usa acciones auditadas de **ese usuario por ID**, no acciones de compañeros con el mismo rol. El acceso directo a formulario e historial aplica el mismo control. El módulo debe estar habilitado y el permiso `purchases.requests.work` concedido; los roles operativos no administran Procesos ni proveedores. El catálogo usa `purchases.suppliers.manage`.
+
+La nueva migración `2026_10_26_000002_create_purchase_workflow.php` agrega persistencia, estados de negocio, módulo, permisos y navegación, sin habilitar empresas ni crear cuentas automáticamente. Después de aplicarla explícitamente, `php artisan purchases:prepare` prepara **Yraida Guillén** (o se puede indicar `--company=ID`): habilita Compras, crea cuatro roles y cuentas con dominio `yraida.test`, configura etapas/transiciones y crea **Librería de Nacho**. Solicita la contraseña temporal sin mostrarla ni almacenarla en fuentes. Solo funciona en entorno local y conserva contraseñas existentes al repetirlo; no reemplaza configuraciones o cuentas incompatibles. No cambia la longitud mínima de las contraseñas de los formularios administrativos.
+
+Correos preparados: `comprador@yraida.test`, `aprobador.n1@yraida.test`, `receptor.verificador@yraida.test`, `pagador@yraida.test`.
+
+### Lectura y edición de la secuencia por proceso
+
+**Sistema → Procesos** muestra el nombre editable del proceso sobre la tabla **Estación origen · Estación destino · Rol · Estatus**, en el orden real del flujo. Pago aparece como fila y la última etapa tiene destino **Fin del proceso**. El estatus de cada fila es el resultado de negocio; no se confunde con Activo/Inactivo. Los nombres largos conservan el tamaño de los indicadores y la tabla tiene scroll propio en pantallas estrechas.
+
+Agregar o modificar una etapa abre un modal Blade local: permite elegir una etapa de catálogo o crear una nueva, cambiar posición, rol de la empresa, resultado y datos que completa. Las etapas sin un campo asociado sirven para revisión y envío. La primera etapa debe capturar los datos de compra. Los campos de fecha no se repiten y conservan su orden relativo; se pueden insertar revisiones y retirar etapas intermedias. Quitar una etapa usa confirmación local, borrado lógico y reconecta las etapas vecinas. No permite cambios estructurales mientras haya compras en curso; sí permite renombrar el proceso. El historial queda disponible tras quitar una etapa.
+
+La migración incremental `2026_10_26_000003_group_purchase_process_stages.php` crea la definición con nombre y agrupa las configuraciones existentes bajo **Compras**, conservando IDs, solicitudes y auditoría. No requiere repetir la preparación de cuentas ni restablece datos iniciales. Cada empresa dispone de un proceso de compras configurable; no incorpora motores de otros módulos de negocio.

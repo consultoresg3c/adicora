@@ -43,6 +43,48 @@ class Status extends Model
         return $this->belongsTo(StatusType::class, 'status_type_id');
     }
 
+    /** Pasos que utilizan este estado por ID. */
+    public function processSteps(): HasMany
+    {
+        return $this->hasMany(ProcessStep::class);
+    }
+
+    /** Etapas que utilizan este estado por ID. */
+    public function processStages(): HasMany
+    {
+        return $this->hasMany(ProcessStage::class);
+    }
+
+    /** Procesos que utilizan este estado administrativo. */
+    public function processDefinitions(): HasMany
+    {
+        return $this->hasMany(ProcessDefinition::class);
+    }
+
+    /** Proveedores que utilizan este estado. */
+    public function suppliers(): HasMany
+    {
+        return $this->hasMany(Supplier::class);
+    }
+
+    /** Solicitudes que utilizan este estatus de negocio. */
+    public function purchaseRequests(): HasMany
+    {
+        return $this->hasMany(PurchaseRequest::class);
+    }
+
+    /** Etapas configuradas con este resultado. */
+    public function purchaseStageResults(): HasMany
+    {
+        return $this->hasMany(PurchaseStage::class, 'completion_status_id');
+    }
+
+    /** Etapas que utilizan este estatus inicial. */
+    public function purchaseStageStarts(): HasMany
+    {
+        return $this->hasMany(PurchaseStage::class, 'initial_status_id');
+    }
+
     /** Empresas que utilizan este estado. */
     public function companies(): HasMany
     {

@@ -51,7 +51,8 @@ class MenusBranchesListingTest extends TestCase
             'module_id' => $leaf->module_id, 'status_id' => $leaf->status_id,
         ]))->assertViewHas('records', fn (LengthAwarePaginator $records) => $records->total() === 1 && $records->first()->is($leaf));
 
-        $this->get('/menus?kind=parent')->assertViewHas('records', fn (LengthAwarePaginator $records) => $records->total() === 4 && $records->getCollection()->every(fn (MenuItem $item) => $item->is_parent));
+        $parentCount = MenuItem::where('is_parent', true)->count();
+        $this->get('/menus?kind=parent')->assertViewHas('records', fn (LengthAwarePaginator $records) => $records->total() === $parentCount && $records->getCollection()->every(fn (MenuItem $item) => $item->is_parent));
         $this->get('/menus?q=sucursales&status_id='.$this->statusId('menus', false))
             ->assertViewHas('records', fn (LengthAwarePaginator $records) => $records->total() === 0)
             ->assertSee('aria-label="Paginación del listado"', false)->assertSee('Sin registros');

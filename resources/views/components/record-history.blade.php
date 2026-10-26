@@ -11,11 +11,18 @@
         'status_id' => 'Estado', 'status_type_id' => 'Módulo del estado', 'company_id' => 'Empresa',
         'parent_id' => 'Menú padre', 'module_id' => 'Módulo', 'permission_id' => 'Permiso',
         'module_ids' => 'Módulos habilitados', 'permission_ids' => 'Permisos', 'role_ids' => 'Roles',
+        'origin_stage_id' => 'Etapa origen', 'destination_stage_id' => 'Etapa destino', 'responsible_role_id' => 'Rol responsable',
+        'stage_ids' => 'Secuencia de etapas', 'process_definition_id' => 'Proceso', 'process_stage_id' => 'Etapa del catálogo',
+        'completion_status_id' => 'Estatus de resultado', 'initial_status_id' => 'Estatus inicial', 'position' => 'Posición', 'field_name' => 'Datos de la etapa',
+        'supplier_id' => 'Proveedor', 'purchase_stage_id' => 'Etapa actual', 'created_by_id' => 'Solicitante',
+        'purchase_date' => 'Fecha de compra', 'approval_date' => 'Fecha de aprobación', 'receipt_date' => 'Fecha de recepción', 'payment_date' => 'Fecha de pago',
+        'amount' => 'Monto', 'currency' => 'Moneda', 'completed_at' => 'Finalización',
         'password_changed' => 'Contraseña',
     ];
     $formatValue = static function ($value, string $field): string {
         if ($value === null || $value === '') return 'Sin valor';
         if (in_array($field, ['is_active', 'is_parent'], true)) return $value ? 'Sí' : 'No';
+        if ($field === 'field_name') return ['purchase_date' => 'Proveedor, monto y fecha de compra', 'approval_date' => 'Fecha de aprobación', 'receipt_date' => 'Fecha de recepción', 'payment_date' => 'Fecha de pago'][$value] ?? 'Solo revisión y envío';
         if ($field === 'lifecycle_status') return [1 => 'Activo', 0 => 'Inactivo', -1 => 'Eliminado'][$value] ?? (string) $value;
         return is_scalar($value) ? (string) $value : 'Asignación actualizada';
     };

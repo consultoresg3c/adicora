@@ -10,7 +10,7 @@ class AuditEntry extends Model
 {
     public const UPDATED_AT = null;
 
-    protected $fillable = ['actor_id', 'company_id', 'company_record_id', 'branch_id', 'user_id', 'role_id', 'status_id', 'menu_item_id', 'action', 'changes'];
+    protected $fillable = ['actor_id', 'company_id', 'company_record_id', 'branch_id', 'user_id', 'role_id', 'status_id', 'menu_item_id', 'process_stage_id', 'process_step_id', 'process_definition_id', 'supplier_id', 'purchase_stage_id', 'purchase_request_id', 'action', 'changes'];
 
     protected function casts(): array
     {
@@ -63,5 +63,41 @@ class AuditEntry extends Model
     public function menuItem(): BelongsTo
     {
         return $this->belongsTo(MenuItem::class, 'menu_item_id')->withTrashed();
+    }
+
+    /** Etapa del catálogo afectada por esta acción. */
+    public function processStage(): BelongsTo
+    {
+        return $this->belongsTo(ProcessStage::class)->withTrashed();
+    }
+
+    /** Paso de proceso afectado por esta acción. */
+    public function processStep(): BelongsTo
+    {
+        return $this->belongsTo(ProcessStep::class)->withTrashed();
+    }
+
+    /** Proveedor afectado por esta acción. */
+    public function supplier(): BelongsTo
+    {
+        return $this->belongsTo(Supplier::class)->withTrashed();
+    }
+
+    /** Configuración operativa de etapa afectada. */
+    public function purchaseStage(): BelongsTo
+    {
+        return $this->belongsTo(PurchaseStage::class)->withTrashed();
+    }
+
+    /** Solicitud de compra afectada. */
+    public function purchaseRequest(): BelongsTo
+    {
+        return $this->belongsTo(PurchaseRequest::class)->withTrashed();
+    }
+
+    /** Proceso nombrado afectado por esta acción. */
+    public function processDefinition(): BelongsTo
+    {
+        return $this->belongsTo(ProcessDefinition::class)->withTrashed();
     }
 }

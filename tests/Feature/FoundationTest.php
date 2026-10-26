@@ -275,10 +275,11 @@ class FoundationTest extends TestCase
     public function test_seeder_can_be_repeated_without_resetting_admin_credentials(): void
     {
         $admin = $this->foundation();
+        $statusCount = Status::count();
         $admin->update(['password' => 'Changed.Test.2026!']);
         $this->seed(FoundationSeeder::class);
         $this->assertDatabaseCount('users', 1);
-        $this->assertDatabaseCount('statuses', 8);
+        $this->assertDatabaseCount('statuses', $statusCount);
         $this->assertSame(6, Status::whereHas('type', fn ($query) => $query->whereIn('code', ['companies', 'branches', 'users']))->count());
         $this->assertTrue(Hash::check('Changed.Test.2026!', $admin->fresh()->password));
     }

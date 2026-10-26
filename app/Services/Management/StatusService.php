@@ -35,7 +35,7 @@ class StatusService
     {
         DB::transaction(function () use ($status, $actor): void {
             $record = Status::query()->lockForUpdate()->findOrFail($status->id);
-            foreach (['companies', 'branches', 'users', 'menuItems'] as $relation) {
+            foreach (['companies', 'branches', 'users', 'menuItems', 'processSteps', 'processStages', 'suppliers', 'purchaseRequests', 'purchaseStageResults', 'purchaseStageStarts', 'processDefinitions'] as $relation) {
                 if ($record->{$relation}()->withTrashed()->exists()) {
                     throw ValidationException::withMessages(['status' => 'Este estado está asociado a registros. Desactívalo para conservar sus relaciones.']);
                 }

@@ -16,6 +16,7 @@ class ListingRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'process_id' => ['nullable', 'integer', Rule::exists('process_definitions', 'id')->whereNull('deleted_at')],
             'q' => ['nullable', 'string', 'max:100'],
             'per_page' => ['nullable', 'integer', Rule::in([10, 15, 25, 50])],
             'page' => ['nullable', 'integer', 'min:1'],

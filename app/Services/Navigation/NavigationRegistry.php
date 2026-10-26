@@ -32,6 +32,10 @@ class NavigationRegistry
             'users.index' => ['label' => 'Usuarios', 'permission' => 'access.users.manage', 'module' => 'access'],
             'roles.index' => ['label' => 'Roles y permisos', 'permission' => 'access.roles.manage', 'module' => 'access'],
             'statuses.index' => ['label' => 'Estados', 'permission' => 'system.statuses.manage', 'module' => null],
+            'processes.index' => ['label' => 'Procesos', 'permission' => 'system.processes.manage', 'module' => null],
+            'purchases.index' => ['label' => 'Pendientes de compras', 'permission' => 'purchases.requests.work', 'module' => 'purchases'],
+            'purchases.tracking' => ['label' => 'Tracking de solicitudes', 'permission' => 'purchases.requests.work', 'module' => 'purchases'],
+            'suppliers.index' => ['label' => 'Proveedores', 'permission' => 'purchases.suppliers.manage', 'module' => 'purchases'],
             'menus.index' => ['label' => 'Menús', 'permission' => 'system.menus.manage', 'module' => null],
         ];
 

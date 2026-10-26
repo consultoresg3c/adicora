@@ -1028,3 +1028,15 @@
         display: none;
     }
 }
+
+/* Lectura del proceso: cabecera con nombre y tabla de la secuencia. */
+.process-heading { margin-block: 24px; padding: 24px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+.process-name-form { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+.process-name-control { flex: 1 1 260px; max-width: 460px; }
+.process-name-form .form-feedback { flex-basis: 100%; }
+.process-name-form .form-feedback:empty, .process-name-form .field-error:empty { display: none; }
+.process-sequence-table { min-width: 720px; }
+.process-sequence-table th, .process-sequence-table td { padding: 14px 12px; }
+.process-heading-meta { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 12px; color: var(--muted); }
+.process-result-status { display: inline-flex; align-items: center; width: 170px; min-width: 170px; height: 52px; padding: 6px 10px; white-space: normal; border: 1px solid var(--line); border-radius: 5px; font-size: 13px; line-height: 1.4; }
+@media (max-width: 640px) { .process-heading { padding: 16px; } .process-name-control { max-width: none; flex-basis: 100%; } .process-name-form > button { width: 100%; } }

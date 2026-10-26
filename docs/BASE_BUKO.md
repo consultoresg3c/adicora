@@ -214,3 +214,43 @@ php vendor/phpunit/phpunit/phpunit --no-configuration --bootstrap vendor/autoloa
 3. **Perfil, recuperación y MFA**: definir correo saliente y segundo factor antes de exponer BUKO a Internet. El login actual no muestra enlaces a flujos que no existen.
 4. **Permisos más finos**: la base usa `manage` por módulo. Separar lectura/creación/edición/exportación cuando aparezca una necesidad real.
 5. **Empresa y entidad legal**: decidir si empresa equivale a razón social para nómina, y si las sucursales comparten identificación fiscal.
+
+## Configuración global de procesos
+
+Sistema → Procesos administra `process_steps` y el catálogo `process_stages` desde formularios modales Blade. Cada paso almacena `origin_stage_id`, `destination_stage_id`, `status_id` y `responsible_role_id` con FKs restrictivas. Las etapas tienen nombre único y `status_id` propio. Los contextos de estados son `processes` y `process_stages`; no se reutilizan estados de otros módulos. El módulo Compras interpreta sus transiciones para ejecutar el flujo operativo descrito a continuación. No hay asignación automática de cuentas desde el CRUD global.
+
+El permiso global `system.processes.manage` no tiene asignaciones iniciales: accede el superadministrador, con delegación posterior explícita a cuentas globales. Ser rol responsable no concede permisos ni acceso. La selección muestra roles existentes con su empresa o ámbito global, excluyendo roles y empresas eliminados. Los registros son configuración global, no se acepta un ámbito empresarial desde el formulario.
+
+La migración incremental del 26/10/2026 incorpora tablas, catálogos, permiso, menú bajo Sistema y FKs `process_stage_id`/`process_step_id` en auditoría. Los cambios y el borrado lógico se auditan en la misma transacción; el historial permanece consultable tras eliminar. Las etapas referenciadas incluso por pasos eliminados y los estados utilizados no admiten eliminación. Las migraciones locales las aplica el responsable del entorno.
+
+## Compras: solicitudes por etapa y tracking personal
+
+`purchase_stages` vincula empresa, etapa del catálogo, rol responsable y estatus inicial/de resultado mediante FKs. `field_name` selecciona el manejador de formulario (los cuatro campos de fecha); es una clave técnica, no un estatus de negocio. Las posiciones definen la secuencia esperada; cada avance también exige una única transición activa coincidente en `process_steps`. Una configuración incompleta se rechaza sin guardar datos parciales.
+
+`purchase_requests` contiene proveedor por ID, monto decimal, USD, cuatro fechas manuales, etapa actual, estatus dinámico, autor, versión y fecha de finalización. Los estados de negocio pertenecen al contexto `purchase_requests`; nunca sustituyen la disponibilidad Activo/Inactivo de los catálogos. Los proveedores pertenecen a una empresa y tienen catálogo de estados propio. Todas las entidades administrables nuevas tienen borrado lógico y auditoría con FKs; no se ofrece eliminación de solicitudes porque este alcance excluye cancelaciones.
+
+El acceso operativo exige módulo Compras habilitado, permiso `purchases.requests.work`, pertenencia a empresa y rol vigente de la etapa. La actualización bloquea la solicitud, verifica su versión y vuelve a comprobar el acceso. El servidor deriva empresa, autor, etapa, estatus y moneda; los campos de otras etapas se rechazan. La finalización de Pago cierra la solicitud. El tracking filtra `audit_entries.actor_id` por el usuario concreto y conserva consulta al avanzar; no amplía el ámbito a otros usuarios del mismo rol. Formulario e historial comparten autorización. Las fechas se normalizan a valores escalares en auditoría; contraseñas nunca se registran.
+
+La preparación inicial es un comando local explícito, transaccional y repetible: no es un seeder ni parte automática de una migración. Conserva credenciales existentes y rechaza colisiones de cuentas, permisos y configuraciones. Los roles de compra solo reciben el permiso operativo, sin administración de usuarios, proveedores o Procesos. El superadministrador administra el catálogo de proveedores. El proveedor solicitado y las cuatro cuentas se crean únicamente al ejecutar la preparación autorizada.
+
+### Verificación del flujo de compras (26/10/2026)
+
+- Suite SQLite en memoria: 134 pruebas, 1266 aserciones, todas aprobadas; Pint y build correctos. Tras el ajuste final de accesos de Inicio/navegación se volvieron a verificar Compras y navegación: 24 pruebas aprobadas.
+- Migración de Compras aplicada explícitamente en PostgreSQL local y preparación autorizada de Yraida Guillén completada (cuatro cuentas, cuatro etapas, tres transiciones y proveedor inicial).
+- Comprobación real de PostgreSQL: avance completo hasta Pago, pendientes, tracking y cuatro eventos de auditoría en una transacción revertida, sin solicitudes ni auditorías de prueba persistidas.
+- Navegador: login del comprador, menú restringido, pendientes vacíos con paginación, formulario con proveedor inicial, errores por campo y foco al enviar sin datos, navegación Atrás/Adelante. La URL configurada de esta instalación es `http://localhost/adicora/public`; la ruta histórica `/buko/public/` devolvió 404. No se cambió Wamp, Apache ni APP_URL.
+- La comprobación visual móvil y las sesiones de los otros tres roles no se ejecutaron en navegador; sus permisos y etapas sí se cubrieron en las pruebas automáticas y el recorrido transaccional de PostgreSQL.
+
+## Editor de procesos nombrados
+
+`process_definitions` identifica el proceso por nombre, empresa y estado administrativo. Una FK enlaza las etapas operativas y las transiciones existentes; la migración incremental del editor agrupa los registros de cada empresa bajo Compras sin cambiar sus IDs ni inventar eventos históricos. Los índices únicos parciales de etapas vigentes conservan posiciones y campos de filas eliminadas sin bloquear inserciones futuras.
+
+La pantalla mantiene el nombre sobre la tabla de origen/destino/rol/resultado de negocio. Cada fila corresponde a una etapa operativa, incluida la terminal; el destino se deriva de la siguiente posición. Los modales locales permiten insertar, cambiar o quitar filas. `ProcessConfigurationService` bloquea la definición, comprueba versión y ausencia de solicitudes en curso, reordena posiciones y sincroniza las transiciones en la misma transacción, con auditoría de cada fila y de la secuencia. No hay edición independiente de conexiones que pueda divergir de la configuración operativa. El catálogo global de etapas conserva su función de nombres y disponibilidad.
+
+La creación y el avance de compras bloquean la misma definición para evitar carreras con el editor. Las revisiones pueden carecer de campo de fecha y permiten completar la etapa sin inventar datos. El motor sigue la secuencia configurada y finaliza al llegar a la última etapa; las validaciones de fecha comparan con la fecha previa de la secuencia vigente. El primer paso conserva la captura de proveedor/monto/fecha de compra. El tracking continúa delimitado por actor y empresa. El editor es configuración global y conserva `system.processes.manage`; no concede ese acceso a los responsables operativos.
+
+### Verificación del editor de procesos
+
+Migración de agrupación aplicada con autorización expresa. Suite completa: 135 pruebas y 1259 aserciones aprobadas en SQLite en memoria; Pint y build correctos. PostgreSQL: inserción de una revisión, reordenación, conexiones, retirada de etapa y auditoría comprobadas en transacción revertida, además del recorrido completo del flujo de compras. No se conservaron fixtures ni auditorías de esas pruebas.
+
+Navegador con sesión de superadministrador: tabla ordenada con nombre del proceso, rol, resultado y fin explícito; modales locales de alta/edición/confirmación; Escape; búsqueda por rol mediante fetch sin cambiar URL ni destino de la fila filtrada. Se ajustó la anchura para leer los estatus completos y se retiró el espacio reservado por mensajes vacíos. La revisión visual de móvil no se ejecutó; el scroll horizontal permanece limitado a la tabla y los controles usan los componentes adaptables existentes.

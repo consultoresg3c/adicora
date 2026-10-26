@@ -6,8 +6,14 @@ use App\Models\AuditEntry;
 use App\Models\Branch;
 use App\Models\Company;
 use App\Models\MenuItem;
+use App\Models\ProcessDefinition;
+use App\Models\ProcessStage;
+use App\Models\ProcessStep;
+use App\Models\PurchaseRequest;
+use App\Models\PurchaseStage;
 use App\Models\Role;
 use App\Models\Status;
+use App\Models\Supplier;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
 
@@ -21,6 +27,12 @@ class RecordHistoryService
         }
 
         $fields = match (true) {
+            $record instanceof ProcessDefinition => ['company_id', 'name', 'status_id'],
+            $record instanceof Supplier => ['company_id', 'name', 'status_id'],
+            $record instanceof PurchaseStage => ['process_definition_id', 'company_id', 'process_stage_id', 'responsible_role_id', 'completion_status_id', 'initial_status_id', 'field_name', 'position'],
+            $record instanceof PurchaseRequest => ['company_id', 'created_by_id', 'supplier_id', 'purchase_stage_id', 'status_id', 'amount', 'currency', 'purchase_date', 'approval_date', 'receipt_date', 'payment_date', 'completed_at'],
+            $record instanceof ProcessStage => ['name', 'status_id'],
+            $record instanceof ProcessStep => ['process_definition_id', 'origin_stage_id', 'destination_stage_id', 'responsible_role_id', 'status_id'],
             $record instanceof Company => ['name', 'tax_id', 'email', 'phone', 'address', 'status_id'],
             $record instanceof Branch => ['company_id', 'name', 'address', 'status_id'],
             $record instanceof User => ['company_id', 'name', 'email', 'status_id'],
@@ -37,7 +49,15 @@ class RecordHistoryService
 
         // Una edición puede cambiar status_id después de haber cargado la relación anterior.
         $record->unsetRelation('status');
+        foreach (['purchase_date', 'approval_date', 'receipt_date', 'payment_date', 'completed_at'] as $field) {
+            if (array_key_exists($field, $snapshot) && $snapshot[$field] instanceof \DateTimeInterface) {
+                $snapshot[$field] = $snapshot[$field]->format($field === 'completed_at' ? 'Y-m-d H:i:s' : 'Y-m-d');
+            }
+        }
         $snapshot['lifecycle_status'] = $record->lifecycle_status;
+        if ($record instanceof ProcessDefinition) {
+            $snapshot['stage_ids'] = $record->stages()->pluck('id')->all();
+        }
         if ($record instanceof Company) {
             $snapshot['module_ids'] = $record->modules()->orderBy('modules.id')->pluck('modules.id')->all();
         }
@@ -71,6 +91,12 @@ class RecordHistoryService
         }
 
         $subjectKey = match (true) {
+            $record instanceof ProcessDefinition => 'process_definition_id',
+            $record instanceof Supplier => 'supplier_id',
+            $record instanceof PurchaseStage => 'purchase_stage_id',
+            $record instanceof PurchaseRequest => 'purchase_request_id',
+            $record instanceof ProcessStage => 'process_stage_id',
+            $record instanceof ProcessStep => 'process_step_id',
             $record instanceof Company => 'company_record_id',
             $record instanceof Branch => 'branch_id',
             $record instanceof User => 'user_id',
