@@ -10,7 +10,7 @@ class AuditEntry extends Model
 {
     public const UPDATED_AT = null;
 
-    protected $fillable = ['actor_id', 'company_id', 'company_record_id', 'branch_id', 'user_id', 'role_id', 'status_id', 'menu_item_id', 'process_stage_id', 'process_step_id', 'process_definition_id', 'supplier_id', 'purchase_stage_id', 'purchase_request_id', 'action', 'changes'];
+    protected $fillable = ['actor_id', 'company_id', 'company_record_id', 'branch_id', 'user_id', 'role_id', 'status_id', 'menu_item_id', 'process_stage_id', 'process_step_id', 'process_definition_id', 'supplier_id', 'purchase_stage_id', 'purchase_request_id', 'process_field_id', 'action', 'changes'];
 
     protected function casts(): array
     {
@@ -99,5 +99,11 @@ class AuditEntry extends Model
     public function processDefinition(): BelongsTo
     {
         return $this->belongsTo(ProcessDefinition::class)->withTrashed();
+    }
+
+    /** Campo de proceso afectado por la administración. */
+    public function processField(): BelongsTo
+    {
+        return $this->belongsTo(ProcessField::class)->withTrashed();
     }
 }

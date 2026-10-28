@@ -143,7 +143,8 @@ class PurchaseWorkflowTest extends TestCase
     public function test_foreign_supplier_invalid_amount_date_and_nonowned_fields_are_rejected(): void
     {
         $request = $this->start();
-        $this->actingAs($this->workers[1])->putJson('/compras/'.$request->id, ['intent' => 'advance', 'version' => $request->version, 'approval_date' => '2026-10-19', 'amount' => '999'])->assertUnprocessable()->assertJsonValidationErrors(['approval_date', 'amount']);
+        $this->actingAs($this->workers[1])->putJson('/compras/'.$request->id, ['intent' => 'advance', 'version' => $request->version, 'approval_date' => '2026-10-19', 'amount' => '999'])->assertUnprocessable()->assertJsonValidationErrors('amount');
+        $this->putJson('/compras/'.$request->id, ['intent' => 'advance', 'version' => $request->version, 'approval_date' => '2026-10-19'])->assertUnprocessable()->assertJsonValidationErrors('approval_date');
         $other = Company::create(['name' => 'Otra', 'tax_id' => 'J-10000003', 'status_id' => $this->active('companies')]);
         $supplier = Supplier::create(['company_id' => $other->id, 'name' => 'Proveedor privado ajeno', 'status_id' => $this->active('suppliers')]);
         $bad = $this->buyerData();

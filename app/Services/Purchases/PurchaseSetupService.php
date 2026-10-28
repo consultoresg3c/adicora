@@ -16,6 +16,7 @@ use App\Models\User;
 use App\Services\Audit\RecordHistoryService;
 use App\Services\Management\CompanyService;
 use App\Services\Management\ProcessConfigurationService;
+use App\Services\Management\ProcessFieldService;
 use App\Services\Management\ProcessStageService;
 use App\Services\Management\ProcessStepService;
 use App\Services\Management\RoleService;
@@ -47,7 +48,7 @@ class PurchaseSetupService
             if (! $supplier) {
                 app(SupplierService::class)->save(new Supplier, ['company_id' => $company->id, 'name' => 'Librería de Nacho', 'status_id' => $this->status('suppliers', 'Activo')->id], $actor);
             }
-            $process = ProcessDefinition::where('company_id', $company->id)->first() ?? app(ProcessConfigurationService::class)->save(new ProcessDefinition, ['name' => 'Compras', 'company_id' => $company->id], $actor);
+            $process = ProcessDefinition::where('company_id', $company->id)->whereHas('stages', fn ($query) => $query->where('field_name', 'purchase_date'))->first() ?? app(ProcessConfigurationService::class)->save(new ProcessDefinition, ['name' => 'Compras', 'company_id' => $company->id], $actor);
             $definitions = [
                 ['solicitud compra', 'comprador', 'comprador@yraida.test', 'compra solicitada', 'purchase_date'],
                 ['Aprobación nivel1', 'aprobador N1', 'aprobador.n1@yraida.test', 'compra aprobada nivel 1', 'approval_date'],
@@ -80,20 +81,21 @@ class PurchaseSetupService
                     throw ValidationException::withMessages(['stage' => 'La etapa '.$stageName.' fue eliminada.']);
                 }
                 $stage ??= app(ProcessStageService::class)->save(new ProcessStage, ['name' => $stageName, 'status_id' => $this->status('process_stages', 'Activo')->id], $actor);
-                $configuration = PurchaseStage::withTrashed()->where('company_id', $company->id)->where('position', $position + 1)->first() ?? new PurchaseStage;
-                $values = ['process_definition_id' => $process->id, 'company_id' => $company->id, 'process_stage_id' => $stage->id, 'responsible_role_id' => $role->id, 'completion_status_id' => $this->status('purchase_requests', $result)->id, 'initial_status_id' => $position === 0 ? $this->status('purchase_requests', 'Borrador')->id : null, 'position' => $position + 1, 'field_name' => $field];
+                $configuration = PurchaseStage::withTrashed()->where('process_definition_id', $process->id)->where('position', $position + 1)->first() ?? new PurchaseStage;
+                $values = ['process_definition_id' => $process->id, 'company_id' => $company->id, 'process_stage_id' => $stage->id, 'responsible_role_id' => $role->id, 'completion_status_id' => $this->status('purchase_requests', $result)->id, 'initial_status_id' => $position === 0 ? $this->status('purchase_requests', 'Borrador')->id : null, 'position' => $position + 1, 'field_name' => $field, 'is_start' => $position === 0, 'is_end' => $position === count($definitions) - 1];
                 if ($configuration->trashed() || ($configuration->exists && collect($values)->except(['initial_status_id'])->contains(fn ($value, $key) => (string) $configuration->{$key} !== (string) $value))) {
                     throw ValidationException::withMessages(['workflow' => 'Ya existe otra configuración de compras para esta empresa. No se reemplazó.']);
                 }
                 $before = app(RecordHistoryService::class)->snapshot($configuration);
                 $action = $configuration->exists ? 'updated' : 'created';
                 $configuration->fill($values)->save();
+                app(ProcessFieldService::class)->seedStage($configuration, $field);
                 app(RecordHistoryService::class)->record($configuration, $actor, $action, $before);
                 $stages->push($configuration);
             }
             foreach ($stages->slice(0, -1) as $index => $stage) {
                 $next = $stages[$index + 1];
-                $edges = ProcessStep::where('origin_stage_id', $stage->process_stage_id)->get();
+                $edges = ProcessStep::where('process_definition_id', $process->id)->where('origin_stage_id', $stage->process_stage_id)->get();
                 if ($edges->contains(fn ($edge) => $edge->destination_stage_id !== $next->process_stage_id || $edge->responsible_role_id !== $stage->responsible_role_id)) {
                     throw ValidationException::withMessages(['workflow' => 'Una etapa tiene otra transición. Resuélvela en Procesos antes de preparar el flujo.']);
                 }

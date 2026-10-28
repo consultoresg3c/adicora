@@ -6,6 +6,7 @@ use App\Models\PurchaseRequest;
 use App\Models\PurchaseStage;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection;
 
 /** Acceso por empresa y etapa para pendientes, y por actor exacto para tracking. */
 class PurchaseAccessService
@@ -38,16 +39,29 @@ class PurchaseAccessService
         abort_unless($record->company_id === $actor->company_id && ($this->pending($actor)->whereKey($record->id)->exists() || $this->tracking($actor)->withTrashed()->whereKey($record->id)->exists()), 404);
     }
 
-    public function initialStage(User $actor): ?PurchaseStage
+    /** Entradas activas que el usuario puede iniciar; no se deducen de la posición. */
+    public function initialStages(User $actor): Collection
     {
         if (! $actor->company_id || ! $actor->can('purchases.requests.work')) {
-            return null;
+            return new Collection;
         }
-        $stage = PurchaseStage::with('stage.status', 'role')->where('company_id', $actor->company_id)->whereHas('process.status', fn ($status) => $status->where('is_active', true))->where('position', 1)->first();
-        if (! $stage || $stage->field_name !== 'purchase_date' || $stage->stage?->lifecycle_status !== 1 || $stage->role?->company_id !== $actor->company_id) {
-            return null;
-        }
+        $roles = $actor->roles()->where('roles.company_id', $actor->company_id)->select('roles.id');
 
-        return $actor->roles()->whereKey($stage->responsible_role_id)->where('roles.company_id', $actor->company_id)->exists() ? $stage : null;
+        return PurchaseStage::with('stage.status', 'role', 'initialStatus', 'process')
+            ->where('company_id', $actor->company_id)->where('is_start', true)
+            ->whereIn('responsible_role_id', $roles)
+            ->whereHas('role', fn ($query) => $query->where('company_id', $actor->company_id))
+            ->whereHas('process.status', fn ($status) => $status->where('is_active', true))
+            ->whereHas('stage.status', fn ($status) => $status->where('is_active', true))
+            ->whereHas('initialStatus', fn ($status) => $status->where('is_active', true)->whereHas('type', fn ($type) => $type->where('code', 'purchase_requests')))
+            ->orderBy('position')->get();
+    }
+
+    /** Selección explícita cuando hay varias entradas; nunca elige una ajena al usuario. */
+    public function initialStage(User $actor, ?int $selectedId = null): ?PurchaseStage
+    {
+        $stages = $this->initialStages($actor);
+
+        return $selectedId !== null ? $stages->firstWhere('id', $selectedId) : ($stages->count() === 1 ? $stages->first() : null);
     }
 }

@@ -29,22 +29,15 @@
                 <div class="table-scroll">
                     <table>
                         <caption class="sr-only">Menús y módulos del sistema</caption>
-                        <thead><tr><th>Menú</th><th>Pertenece a</th><th>Acción inicial</th><th>Estado</th><th class="numeric">Orden</th><th class="actions-column"><span class="sr-only">Acciones</span></th></tr></thead>
+                        <thead><tr><th>Menú</th><th>Pertenece a</th><th>Acción inicial</th><th>Estado</th><th class="numeric">Orden</th></tr></thead>
                         <tbody>
                             @foreach($records as $item)
                                 <tr>
-                                    <td><span class="menu-cell"><span class="menu-icon-preview"><x-icon :name="$item->icon" /></span><span><strong>{{ $item->name }}</strong><small class="table-secondary">{{ $item->is_parent ? 'Menú padre' : 'Módulo' }}</small></span></span></td>
+                                    <td><span class="menu-cell"><span class="menu-icon-preview"><x-icon :name="$item->icon" /></span><span><a class="row-action" href="{{ route('menus.edit', $item) }}" data-dialog-template="edit-menu-{{ $item->id }}" aria-label="Editar menú {{ $item->name }}">{{ $item->name }}</a><small class="table-secondary">{{ $item->is_parent ? 'Menú padre' : 'Módulo' }}</small></span></span></td>
                                     <td>{{ $item->parent?->name ?? 'Menú principal' }}</td>
                                     <td><span class="table-secondary">{{ $item->is_parent ? 'Desplegar opciones' : ($actions[$item->route_name]['controller'] ?? 'Acción no disponible') }}</span></td>
                                     <td><x-status-badge :status="$item->status" /></td>
                                     <td class="numeric">{{ $item->sort_order }}</td>
-                                    <td class="actions-column">
-                                        <div class="row-actions">
-                                            <a class="button button-quiet icon-button" href="{{ route('records.history', ['resource' => 'menus', 'record' => $item->id]) }}" aria-label="Historial de {{ $item->name }}" title="Ver historial"><x-icon name="list-check" size="18" /></a>
-                                            <a class="button button-quiet icon-button" href="{{ route('menus.edit', $item) }}" data-dialog-template="edit-menu-{{ $item->id }}" aria-label="Editar menú {{ $item->name }}" title="Editar menú"><x-icon name="pencil" size="18" /></a>
-                                            <button class="button button-quiet icon-button button-danger" type="button" data-dialog-template="delete-menu-{{ $item->id }}" aria-label="Eliminar menú {{ $item->name }}" title="Eliminar menú"><x-icon name="trash" size="18" /></button>
-                                        </div>
-                                    </td>
                                 </tr>
                             @endforeach
                         </tbody>
@@ -56,9 +49,6 @@
         @foreach($records as $item)
             <template id="edit-menu-{{ $item->id }}" data-dialog-title="Editar menú">
                 @include('modules.menus.partials.form', ['record' => $item])
-            </template>
-            <template id="delete-menu-{{ $item->id }}" data-dialog-title="Eliminar menú">
-                @include('modules.menus.partials.delete-form', ['record' => $item])
             </template>
         @endforeach
         @if($record->exists && ! $records->getCollection()->contains('id', $record->id))

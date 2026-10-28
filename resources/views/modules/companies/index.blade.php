@@ -29,33 +29,20 @@
     <div class="table-panel">
     @if($records->isEmpty())<x-empty-state title="No hay empresas para mostrar" description="Crea una empresa o ajusta la búsqueda y los filtros para encontrar otros resultados." />
     @else
-    <div class="table-scroll"><table><caption class="sr-only">Empresas registradas</caption><thead><tr><th>Empresa</th><th>Identificación fiscal</th><th>Estado</th><th class="numeric">Sucursales</th><th class="numeric">Usuarios</th><th class="actions-column"><span class="sr-only">Acciones</span></th></tr></thead><tbody>
+    <div class="table-scroll"><table><caption class="sr-only">Empresas registradas</caption><thead><tr><th>Empresa</th><th>Identificación fiscal</th><th>Estado</th><th class="numeric">Sucursales</th><th class="numeric">Usuarios</th></tr></thead><tbody>
         @foreach($records as $item)
             <tr>
-                <td><strong>{{ $item->name }}</strong><span class="table-secondary">{{ $item->email }}</span></td>
+                <td><a class="row-action" href="{{ route('companies.edit', $item) }}" aria-label="Editar {{ $item->name }}">{{ $item->name }}</a><span class="table-secondary">{{ $item->email }}</span></td>
                 <td>{{ $item->tax_id }}</td>
                 <td><x-status-badge :status="$item->status" /></td>
                 <td class="numeric">{{ $item->branches_count }}</td>
                 <td class="numeric">{{ $item->users_count }}</td>
-                <td class="actions-column">
-                    <div class="row-actions">
-                        <a class="button button-quiet icon-button" href="{{ route('records.history', ['resource' => 'empresas', 'record' => $item->id]) }}" aria-label="Historial de {{ $item->name }}" title="Ver historial"><x-icon name="list-check" size="18" /></a>
-                        <a class="button button-quiet icon-button" href="{{ route('companies.edit', $item) }}" aria-label="Editar {{ $item->name }}" title="Editar empresa"><x-icon name="pencil" size="18" /></a>
-                        <button class="button button-quiet icon-button button-danger" type="button" data-dialog-template="delete-company-{{ $item->id }}" aria-label="Eliminar {{ $item->name }}" title="Eliminar empresa"><x-icon name="trash" size="18" /></button>
-                    </div>
-                </td>
             </tr>
         @endforeach
     </tbody></table></div>
     @endif
     <x-list-pagination :records="$records" />
     </div>
-    @foreach($records as $item)
-        <template id="delete-company-{{ $item->id }}" data-dialog-title="Eliminar empresa">
-            @include('modules.companies.partials.delete-form', ['record' => $item])
-        </template>
-    @endforeach
     </div>
     @endfragment
-<x-record-dialog title="Eliminar empresa" />
 @endsection

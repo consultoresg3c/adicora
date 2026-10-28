@@ -7,3 +7,8 @@
 @if($record->exists)
     <x-record-history :record="$record" resource="etapas-procesos" />
 @endif
+@if($record->exists)
+    <template id="delete-processStage-{{ $record->id }}" data-dialog-title="Eliminar etapa">
+        @include('modules.process-stages.partials.delete-form')
+    </template>
+@endif

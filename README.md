@@ -24,6 +24,12 @@ El alcance actual es la base administrativa y de seguridad. Nómina es una posib
 
 Todos los listados incluyen buscador, filtros según su contenido, selector de filas y paginador con total. Búsquedas, filtros y cambios de página actualizan el contenido mediante `fetch`, manteniendo limpia la dirección del navegador.
 
+Para editar un registro, haz clic en su nombre en el listado. Los formularios breves se abren en su modal y los amplios en su página de edición. Los registros protegidos no ofrecen enlace de edición.
+
+Todas las filas comparten el mismo ancho y las mismas columnas. Los tres puntos se sitúan en la zona de etiquetas de la primera fila, en la esquina derecha, sin reducir el ancho de los campos. El acceso al historial está en ese menú y no se repite en el bloque de actividad reciente.
+
+En los formularios de edición, el botón de tres puntos se alinea con la primera fila de campos en la esquina derecha del panel, también en modales, y abre **Ver historial**, **Imprimir detalle** y **Eliminar** cuando la operación está permitida. La última etiqueta reserva espacio para el botón, que queda por encima del control y no se superpone a él. Los listados no muestran iconos de historial ni papeleras; se accede al registro desde su nombre. La confirmación de eliminación se abre sobre la edición; al cancelar se conservan los cambios pendientes. La impresión incluye el detalle guardado y autorizado de cada registro, sin contraseñas ni cambios sin guardar. Las solicitudes de compra ofrecen historial e impresión de sus campos visibles y mantienen su flujo sin eliminación.
+
 El superadministrador global no pertenece a una empresa y administra la configuración del sistema. Un administrador de empresa es un usuario con los permisos correspondientes; su rol no le concede acceso a otras empresas.
 
 ## Capturas
@@ -299,6 +305,26 @@ Correos preparados: `comprador@yraida.test`, `aprobador.n1@yraida.test`, `recept
 
 **Sistema → Procesos** muestra el nombre editable del proceso sobre la tabla **Estación origen · Estación destino · Rol · Estatus**, en el orden real del flujo. Pago aparece como fila y la última etapa tiene destino **Fin del proceso**. El estatus de cada fila es el resultado de negocio; no se confunde con Activo/Inactivo. Los nombres largos conservan el tamaño de los indicadores y la tabla tiene scroll propio en pantallas estrechas.
 
-Agregar o modificar una etapa abre un modal Blade local: permite elegir una etapa de catálogo o crear una nueva, cambiar posición, rol de la empresa, resultado y datos que completa. Las etapas sin un campo asociado sirven para revisión y envío. La primera etapa debe capturar los datos de compra. Los campos de fecha no se repiten y conservan su orden relativo; se pueden insertar revisiones y retirar etapas intermedias. Quitar una etapa usa confirmación local, borrado lógico y reconecta las etapas vecinas. No permite cambios estructurales mientras haya compras en curso; sí permite renombrar el proceso. El historial queda disponible tras quitar una etapa.
+Agregar o modificar una etapa abre un modal Blade local: permite elegir una etapa de catálogo o crear una nueva, cambiar posición, rol de la empresa, resultado y matriz de campos. Cada campo tiene una opción excluyente de Lectura, Editable u Oculto; solo los editables pueden marcarse como Obligatorio. «Solo revisión y envío» convierte los campos visibles en lectura. El inicio se determina con la marca «Inicia el proceso», independientemente de la posición. Un mismo campo puede editarse en varias etapas; se pueden insertar revisiones y retirar etapas intermedias. Quitar una etapa usa confirmación local, borrado lógico y reconecta las etapas vecinas. No permite cambios estructurales mientras haya compras en curso; sí permite renombrar el proceso, ajustar la matriz y agregar campos. El historial queda disponible tras quitar una etapa.
 
-La migración incremental `2026_10_26_000003_group_purchase_process_stages.php` crea la definición con nombre y agrupa las configuraciones existentes bajo **Compras**, conservando IDs, solicitudes y auditoría. No requiere repetir la preparación de cuentas ni restablece datos iniciales. Cada empresa dispone de un proceso de compras configurable; no incorpora motores de otros módulos de negocio.
+La migración incremental `2026_10_26_000003_group_purchase_process_stages.php` crea la definición con nombre y agrupa las configuraciones existentes bajo **Compras**, conservando IDs, solicitudes y auditoría. No requiere repetir la preparación de cuentas ni restablece datos iniciales. Cada empresa puede administrar tantos procesos como requiera, cada uno con sus propias etapas y campos. La operación implementada sigue siendo la solicitud de compra; crear una definición no incorpora automáticamente las funciones de otros módulos de negocio.
+
+### Estaciones de inicio y finalización
+
+Al agregar o editar una etapa aparecen **Inicia el proceso** y **Finaliza el proceso**, dos opciones booleanas independientes. Ambas están desactivadas por defecto en las etapas nuevas. Un proceso admite varias estaciones de inicio y varias de finalización, incluso una etapa que tenga ambas marcas.
+
+Cada estación de inicio configura su estatus inicial. Las nuevas solicitudes solo pueden crearse desde entradas activas correspondientes al rol y empresa del usuario. Si tiene varias entradas disponibles, el usuario elige una antes de abrir el formulario. La captura depende de la etapa seleccionada; no se inventan valores de etapas anteriores.
+
+Una etapa marcada como final no genera conexión a la siguiente estación: al completarla se cierra la solicitud. La última posición sin esa marca no finaliza implícitamente; se muestra «Sin destino definido» y su envío exige completar la configuración. La tabla identifica las estaciones de inicio y los finales explícitos. Las marcas se incluyen en auditoría.
+
+La migración incremental `2026_10_26_000004_add_explicit_process_boundaries.php` agrega `is_start` e `is_end`, ambas con valor predeterminado `false`. Para conservar los procesos existentes, convierte su entrada y cierre anteriores en marcas explícitas; no altera cuentas, solicitudes ni eventos históricos. No requiere repetir la preparación de datos.
+
+### Campos por etapa
+
+El modal de cada etapa presenta la matriz Campos / Lectura / Editable / Oculto / Obligatorio y permite agregar campos de texto (longitud máxima de 1 a 10000), entero, numérico (de 0 a 8 decimales), fecha, hora y fecha y hora. Un campo nuevo se incorpora a esa etapa y queda oculto en las demás etapas existentes. Las etapas nuevas comienzan con sus campos ocultos. Proveedor conserva la selección desde su catálogo y Monto conserva USD y dos decimales.
+
+Guardar admite campos obligatorios vacíos; completar y enviar exige todos los obligatorios de la etapa. El servidor aplica tipos, longitud, decimales y permisos de campo; los ocultos tampoco aparecen en listados, búsquedas por proveedor ni historial. Las fechas de compra, aprobación, recepción y pago conservan su validación cronológica. Los formularios abiertos antes de un cambio de configuración deben recargarse antes de guardar.
+
+La migración incremental `2026_10_26_000005_create_process_field_configuration.php` conserva los valores existentes y convierte la configuración anterior en reglas explícitas. Los campos personalizados se eliminan lógicamente con confirmación y conservan valores e historial; los campos base pueden ocultarse en cada etapa.
+
+La migración incremental `2026_10_26_000006_allow_multiple_processes_per_company.php` elimina la unicidad de empresa en las definiciones de procesos y mantiene un índice de consulta por empresa. Conserva los procesos, etapas, solicitudes e historial existentes.

@@ -7,3 +7,8 @@
 @if($record->exists)
     <x-record-history :record="$record" resource="menus" />
 @endif
+@if($record->exists)
+    <template id="delete-menu-{{ $record->id }}" data-dialog-title="Eliminar menú">
+        @include('modules.menus.partials.delete-form')
+    </template>
+@endif

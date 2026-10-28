@@ -5,11 +5,17 @@
 @section('content')
 @include('modules.shared.company-context', ['allowSystem' => false])
 @if($record->company_id)
-<form class="form-panel" method="post" action="{{ $record->exists ? route('users.update', $record) : route('users.store') }}" data-async-form novalidate>@csrf @if($record->exists)@method('put')@endif
+<form class="form-panel" method="post" action="{{ $record->exists ? route('users.update', $record) : route('users.store') }}" data-async-form novalidate>
+@csrf @if($record->exists)@method('put')@endif
 <input type="hidden" name="company_id" value="{{ $record->company_id }}">
+<x-record-form-header>
+<x-slot:options>@include('modules.users.partials.record-options')</x-slot:options>
 <div class="form-grid">
     <x-field name="name" label="Nombre completo" :value="$record->name" required maxlength="180" autocomplete="name" />
     <x-field name="email" label="Correo electrónico" type="email" :value="$record->email" required maxlength="255" autocomplete="off" />
+</div>
+</x-record-form-header>
+<div class="form-grid">
     <x-field name="password" label="Contraseña" type="password" :required="!$record->exists" minlength="12" maxlength="128" autocomplete="new-password" :hint="$record->exists ? 'Déjala vacía para conservar la actual.' : 'Usa al menos 12 caracteres.'" />
     <x-field name="password_confirmation" label="Confirmar contraseña" type="password" autocomplete="new-password" />
     <x-select name="status_id" label="Estado" :options="$statuses" :value="$record->status_id" />
@@ -20,5 +26,10 @@
 @else<x-empty-state title="Selecciona una empresa para continuar" description="La cuenta quedará vinculada a esa empresa. Luego podrás asignarle roles y permisos." />@endif
 @if($record->exists)
     <x-record-history :record="$record" resource="usuarios" />
+@endif
+@if($record->exists && ! $record->is_super_admin && $record->id !== auth()->id())
+    <template id="delete-user-{{ $record->id }}" data-dialog-title="Eliminar usuario">
+        @include('modules.users.partials.delete-form')
+    </template>
 @endif
 @endsection

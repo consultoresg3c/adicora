@@ -22,7 +22,7 @@ Route::post('/logout', [SessionController::class, 'destroy'])->middleware('auth'
 Route::middleware(['auth', 'active'])->group(function () {
     Route::get('/inicio', DashboardController::class)->name('dashboard');
     Route::get('/{resource}/{record}/historial', RecordHistoryController::class)
-        ->whereIn('resource', ['empresas', 'sucursales', 'usuarios', 'roles', 'estados', 'menus', 'procesos', 'etapas-procesos', 'proveedores', 'solicitudes-compra', 'flujos-procesos', 'etapas-compras'])
+        ->whereIn('resource', ['empresas', 'sucursales', 'usuarios', 'roles', 'estados', 'menus', 'procesos', 'etapas-procesos', 'proveedores', 'solicitudes-compra', 'flujos-procesos', 'etapas-compras', 'campos-procesos'])
         ->whereNumber('record')->name('records.history');
     Route::resource('proveedores', SupplierController::class)->parameters(['proveedores' => 'supplier'])->names('suppliers')->except('show')->middleware('can:purchases.suppliers.manage');
     Route::middleware('can:purchases.requests.work')->group(function () {
@@ -34,6 +34,8 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::put('/compras/{purchase}', [PurchaseController::class, 'update'])->whereNumber('purchase')->name('purchases.update');
     });
     Route::middleware('can:system.processes.manage')->group(function () {
+        Route::get('/procesos/{processDefinition}/campos/{processField}/eliminar', [ProcessDefinitionController::class, 'confirmField'])->name('processes.fields.confirm');
+        Route::delete('/procesos/{processDefinition}/campos/{processField}', [ProcessDefinitionController::class, 'destroyField'])->name('processes.fields.destroy');
         Route::get('/procesos/{processDefinition}/etapas/create', [ProcessDefinitionController::class, 'createStage'])->name('processes.stages.create');
         Route::post('/procesos/{processDefinition}/etapas', [ProcessDefinitionController::class, 'storeStage'])->name('processes.stages.store');
         Route::get('/procesos/{processDefinition}/etapas/{purchaseStage}/edit', [ProcessDefinitionController::class, 'editStage'])->name('processes.stages.edit');

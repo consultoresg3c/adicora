@@ -15,13 +15,20 @@
 <div data-list-results>
 @if($process)
 <section class="process-heading" aria-label="Datos del proceso">
+    <x-record-form-header>
+    <x-slot:options><x-record-options :history-url="route('records.history', ['resource' => 'flujos-procesos', 'record' => $process->id])" print-template="print-process" delete-template="delete-process" delete-label="Eliminar proceso" label="Opciones del proceso" /></x-slot:options>
     <form class="process-name-form" method="post" action="{{ route('processes.update', $process) }}" data-async-form novalidate>
         @csrf @method('PUT')<input type="hidden" name="version" value="{{ $process->version }}">
         <div class="process-name-control"><x-field name="name" label="Nombre proceso" :value="$process->name" required maxlength="180" /></div>
         <button class="button button-secondary" type="submit" data-submit><span data-submit-label>Guardar nombre</span></button>
         <div class="form-feedback" data-form-feedback role="alert" tabindex="-1"></div>
     </form>
-    <div class="process-heading-meta"><a class="button button-primary" href="{{ route('processes.stages.create', $process) }}" data-dialog-template="create-process-stage"><x-icon name="plus" size="18" /> Agregar etapa</a><span>{{ $process->company?->name }}</span><a class="button button-quiet" href="{{ route('records.history', ['resource' => 'flujos-procesos', 'record' => $process->id]) }}">Historial del proceso</a><button class="button button-quiet button-danger" type="button" data-dialog-template="delete-process">Eliminar proceso</button></div>
+    </x-record-form-header>
+    <div class="process-heading-meta"><a class="button button-primary" href="{{ route('processes.stages.create', $process) }}" data-dialog-template="create-process-stage"><x-icon name="plus" size="18" /> Agregar etapa</a><span>{{ $process->company?->name }}</span></div>
+    <x-record-print id="print-process" :title="$process->name" :fields="['Empresa' => $process->company?->name, 'Registro' => $process->id]">
+        <h2>Secuencia de etapas</h2>
+        <ol>@foreach($sequence as $stage)<li>{{ $stage->stage?->name }} · {{ $stage->role?->name ?? 'Rol no disponible' }} · {{ $stage->completionStatus?->name ?? 'Estatus no disponible' }}{{ $stage->is_start ? ' · Inicio' : '' }}{{ $stage->is_end ? ' · Fin' : '' }}</li>@endforeach</ol>
+    </x-record-print>
 </section>
 @endif
 <div class="table-panel">
@@ -29,17 +36,12 @@
     <x-empty-state :title="$process ? 'No hay etapas para estos filtros' : 'No hay procesos configurados'" :description="$process ? 'Agrega una etapa o revisa los filtros del proceso.' : 'Crea un proceso y agrega sus etapas para comenzar.'" />
 @else
 <div class="table-scroll"><table class="process-sequence-table"><caption class="sr-only">Etapas del proceso {{ $process->name }}</caption>
-<thead><tr><th>Estación origen</th><th>Estación destino</th><th>Rol</th><th>Estatus</th><th class="actions-column"><span class="sr-only">Acciones</span></th></tr></thead>
+<thead><tr><th>Estación origen</th><th>Estación destino</th><th>Rol</th><th>Estatus</th></tr></thead>
 <tbody>@foreach($records as $item)<tr>
-    <td><span class="table-secondary">Etapa {{ $item->position }}</span><strong>{{ $item->stage?->name }}</strong></td>
+    <td><span class="table-secondary">Etapa {{ $item->position }}</span><a class="row-action" href="{{ route('processes.stages.edit', [$process, $item]) }}" data-dialog-template="edit-process-stage-{{ $item->id }}" aria-label="Modificar {{ $item->stage?->name }}">{{ $item->stage?->name }}</a>@if($item->is_start)<span class="table-secondary">Inicio del proceso</span>@endif</td>
     <td>{{ $destinations[$item->id] ?? 'Fin del proceso' }}</td>
     <td>{{ $item->role?->name ?? 'Rol no disponible' }}</td>
     <td><span class="process-result-status">{{ $item->completionStatus?->name ?? 'Estatus no disponible' }}</span></td>
-    <td class="actions-column"><div class="row-actions">
-        <a class="button button-quiet icon-button" href="{{ route('records.history', ['resource' => 'etapas-compras', 'record' => $item->id]) }}" aria-label="Historial de {{ $item->name }}" title="Ver historial"><x-icon name="list-check" size="18" /></a>
-        <a class="button button-quiet icon-button" href="{{ route('processes.stages.edit', [$process, $item]) }}" data-dialog-template="edit-process-stage-{{ $item->id }}" aria-label="Modificar {{ $item->name }}" title="Modificar etapa"><x-icon name="pencil" size="18" /></a>
-        <button class="button button-quiet icon-button button-danger" type="button" data-dialog-template="delete-process-stage-{{ $item->id }}" aria-label="Quitar {{ $item->name }}" title="Quitar etapa"><x-icon name="trash" size="18" /></button>
-    </div></td>
 </tr>@endforeach</tbody></table></div>
 @endif
 <x-list-pagination :records="$records" />
@@ -47,9 +49,11 @@
 @if($process)
 @foreach($records as $item)
 <template id="edit-process-stage-{{ $item->id }}" data-dialog-title="Modificar etapa">@include('modules.processes.partials.stage-form', ['record' => $item])</template>
-<template id="delete-process-stage-{{ $item->id }}" data-dialog-title="Quitar etapa">@include('modules.processes.partials.remove-stage', ['record' => $item])</template>
 @endforeach
 @if($record?->exists && ! $records->getCollection()->contains('id', $record->id))<template id="edit-process-stage-{{ $record->id }}" data-dialog-title="Modificar etapa">@include('modules.processes.partials.stage-form')</template>@endif
+@foreach($fields->whereNull('attribute') as $field)
+<template id="delete-process-field-{{ $field->id }}" data-dialog-title="Eliminar campo"><form class="dialog-form" method="post" action="{{ route('processes.fields.destroy', [$process, $field]) }}" data-async-form data-field-confirm novalidate>@csrf @method('DELETE')<input type="hidden" name="version" value="{{ $process->version }}"><p>¿Eliminar el campo <strong>{{ $field->name }}</strong> del proceso? Se conservarán sus valores y su historial.</p>@include('modules.processes.partials.confirm-actions', ['label' => 'Eliminar campo'])</form></template>
+@endforeach
 <template id="create-process-stage" data-dialog-title="Agregar etapa">@include('modules.processes.partials.stage-form', ['record' => $formRecord])</template>
 <details class="record-history"><summary>Historial reciente del proceso</summary><x-record-history :record="$process" resource="flujos-procesos" /></details>
 <template id="delete-process" data-dialog-title="Eliminar proceso">
@@ -62,7 +66,7 @@
 <form class="dialog-form" method="post" action="{{ route('processes.store') }}" data-async-form novalidate>@csrf
 <x-field name="name" label="Nombre proceso" required maxlength="180" />
 <x-select name="company_id" label="Empresa" :options="$companies" />
-<p class="field-hint">Cada empresa dispone de un proceso de compras. Configura aquí su secuencia de etapas.</p>
+<p class="field-hint">Cada empresa puede tener varios procesos. Cada proceso mantiene su propia secuencia de etapas y configuración de campos.</p>
 <x-form-actions :cancel="route('processes.index')" modal />
 </form>
 </template>

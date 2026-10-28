@@ -19,7 +19,7 @@ class ProcessStageController extends ManagementController
     {
         $request->attributes->set('navigation_route', 'processes.index');
         $term = $request->searchTerm();
-        $record = $request->filled('editar') ? ProcessStage::with('recentActivities.actor')->findOrFail($request->integer('editar')) : new ProcessStage;
+        $record = $request->filled('editar') ? ProcessStage::with('status', 'recentActivities.actor')->findOrFail($request->integer('editar')) : new ProcessStage;
         $records = ProcessStage::with('status', 'recentActivities.actor', 'purchaseConfigurations.role', 'purchaseConfigurations.completionStatus', 'purchaseConfigurations.company')
             ->when($term !== '', fn ($query) => $query->whereLike('name', '%'.$term.'%'))
             ->when($request->integer('status_id'), fn ($query, $id) => $query->where('status_id', $id))

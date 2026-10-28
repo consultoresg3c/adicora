@@ -1,4 +1,7 @@
-<x-field name="name" label="Nombre del estado" :value="$record->name" required maxlength="100" />
+<x-record-form-header>
+    <x-slot:options>@include('modules.statuses.partials.record-options')</x-slot:options>
+    <x-field name="name" label="Nombre del estado" :value="$record->name" required maxlength="100" />
+</x-record-form-header>
 @if($record->exists)
     <input type="hidden" name="status_type_id" value="{{ $record->status_type_id }}">
     <p class="field-hint">Módulo: <strong>{{ $record->type->name }}</strong>. El módulo de un estado existente permanece fijo.</p>

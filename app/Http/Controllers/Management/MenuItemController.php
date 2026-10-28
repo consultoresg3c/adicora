@@ -24,7 +24,7 @@ class MenuItemController extends ManagementController
         $term = $request->searchTerm();
         $installed = $navigation->isInstalled();
         $record = $installed && $request->filled('editar')
-            ? MenuItem::with('recentActivities.actor')->findOrFail($request->integer('editar'))
+            ? MenuItem::with('parent', 'status', 'recentActivities.actor')->findOrFail($request->integer('editar'))
             : new MenuItem;
         $records = $installed
             ? MenuItem::query()->with('parent', 'status', 'permission.module', 'recentActivities.actor')->withCount('children')

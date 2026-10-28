@@ -7,3 +7,8 @@
 @if($record->exists)
     <x-record-history :record="$record" resource="estados" />
 @endif
+@if($record->exists)
+    <template id="delete-status-{{ $record->id }}" data-dialog-title="Eliminar estado">
+        @include('modules.statuses.partials.delete-form')
+    </template>
+@endif

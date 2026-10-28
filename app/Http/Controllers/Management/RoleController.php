@@ -53,7 +53,7 @@ class RoleController extends ManagementController
         $this->assertTenant($request, $role);
         abort_unless($this->access->canManageGrants($request->user(), $role), 403);
 
-        return view('modules.roles.form', ['record' => $role->load('permissions', 'recentActivities.actor')] + $this->options($request, 'users', $role->company_id));
+        return view('modules.roles.form', ['record' => $role->load('company', 'permissions.module', 'recentActivities.actor')] + $this->options($request, 'users', $role->company_id));
     }
 
     public function update(RoleRequest $request, Role $role, RoleService $service): JsonResponse|RedirectResponse

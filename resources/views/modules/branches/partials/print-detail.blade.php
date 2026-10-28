@@ -1,0 +1,1 @@
+<x-record-print :id="'print-branch-'.$record->id" :title="$record->name" :fields="['Registro' => $record->id, 'Empresa' => $record->company?->name, 'Dirección' => $record->address, 'Estado' => $record->status?->name]" />

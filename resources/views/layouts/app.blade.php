@@ -27,5 +27,7 @@
             @include('layouts.partials.footer')
         </div>
     </div>
+    <x-record-dialog id="record-confirm-dialog" title="Confirmar eliminación" />
+    <div data-record-print-root></div>
 </body>
 </html>

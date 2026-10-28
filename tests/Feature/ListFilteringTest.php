@@ -181,9 +181,34 @@ class ListFilteringTest extends TestCase
         $this->assertStringContainsString($caption, $html);
         $this->assertStringContainsString(e($payload), $html);
         $this->assertStringNotContainsString($payload, $html);
+        $this->assertMatchesRegularExpression('/<a class="row-action"[^>]*>'.preg_quote(e($payload), '/').'<\/a>/', $html);
+        $this->assertStringContainsString('aria-label="Editar '.e($payload).'"', $html);
         if ($path !== '/roles') {
             $this->assertStringContainsString(e($payload.'@example.test'), $html);
         }
+    }
+
+    public function test_protected_roles_and_users_do_not_offer_edit_links_from_their_names(): void
+    {
+        $this->foundation();
+        $company = $this->company('Empresa local', 'J-10000001-0');
+        $actor = $this->member($company, ['name' => 'Responsable local']);
+        $actor->permissions()->sync(Permission::whereIn('code', ['access.users.manage', 'access.roles.manage'])->pluck('id'));
+        $privilegedRole = Role::create(['company_id' => $company->id, 'name' => 'Rol protegido']);
+        $privilegedRole->permissions()->attach(Permission::where('code', 'organization.branches.manage')->value('id'));
+        $protectedUser = $this->member($company, ['name' => 'Usuario protegido']);
+        $protectedUser->roles()->attach($privilegedRole);
+        $editableRole = Role::create(['company_id' => $company->id, 'name' => 'Rol editable']);
+        $editableUser = $this->member($company, ['name' => 'Usuario editable']);
+
+        $this->actingAs($actor)->get('/roles')->assertOk()
+            ->assertSee('href="'.route('roles.edit', $editableRole).'"', false)
+            ->assertDontSee('href="'.route('roles.edit', $privilegedRole).'"', false)
+            ->assertSee('<strong>Rol protegido</strong>', false);
+        $this->get('/usuarios')->assertOk()
+            ->assertSee('href="'.route('users.edit', $editableUser).'"', false)
+            ->assertDontSee('href="'.route('users.edit', $protectedUser).'"', false)
+            ->assertSee('<strong>Usuario protegido</strong>', false);
     }
 
     public static function fragmentPaths(): array

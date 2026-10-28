@@ -18,7 +18,7 @@ class SupplierController extends ManagementController
     {
         $term = $request->searchTerm();
         $record = $request->filled('editar')
-            ? $this->access->scope(Supplier::with('recentActivities.actor'), $request->user())->findOrFail($request->integer('editar'))
+            ? $this->access->scope(Supplier::with('company', 'status', 'recentActivities.actor'), $request->user())->findOrFail($request->integer('editar'))
             : new Supplier;
 
         $records = $this->access->scope(Supplier::with('company', 'status', 'recentActivities.actor'), $request->user())

@@ -7,9 +7,11 @@ use App\Models\Company;
 use App\Models\MenuItem;
 use App\Models\Module;
 use App\Models\Permission;
+use App\Models\ProcessStage;
 use App\Models\Role;
 use App\Models\Status;
 use App\Models\StatusType;
+use App\Models\Supplier;
 use App\Models\User;
 use App\Services\Access\AccessService;
 use Database\Seeders\FoundationSeeder;
@@ -65,12 +67,95 @@ class RecordLifecycleTest extends TestCase
             'roles' => Role::create(['company_id' => ($company ?? $this->company())->id, 'name' => 'Rol para eliminar']),
             'estados' => Status::create(['status_type_id' => StatusType::where('code', 'companies')->value('id'), 'name' => 'Estado sin referencias', 'is_active' => true]),
             'menus' => MenuItem::create(['name' => 'Menú sin hijos', 'is_parent' => true, 'icon' => 'briefcase', 'status_id' => $this->statusId('menus'), 'sort_order' => 90]),
+            'proveedores' => Supplier::create(['company_id' => ($company ?? $this->company())->id, 'name' => 'Proveedor para eliminar', 'status_id' => $this->statusId('suppliers')]),
+            'etapas-procesos' => ProcessStage::create(['name' => 'Etapa para eliminar', 'status_id' => $this->statusId('process_stages')]),
         };
     }
 
     private function userData(Company $company): array
     {
         return ['company_id' => $company->id, 'name' => 'Cuenta auditada', 'email' => 'auditada@example.test', 'password' => 'Original.Pass.2026!', 'password_confirmation' => 'Original.Pass.2026!', 'status_id' => $this->statusId('users'), 'role_ids' => [], 'permission_ids' => []];
+    }
+
+    public function test_role_options_are_inside_edit_and_print_only_saved_permissions_with_escaped_names(): void
+    {
+        $admin = $this->admin();
+        $role = $this->record('roles');
+        $payload = '<img src=x onerror=alert("rol")>';
+        $role->update(['name' => $payload]);
+        $permission = Permission::where('code', 'access.users.manage')->firstOrFail();
+        $role->permissions()->attach($permission);
+
+        $this->actingAs($admin)->get('/roles')->assertOk()
+            ->assertDontSee('data-dialog-template="delete-role-', false);
+        $this->get('/roles/create')->assertOk()->assertDontSee('data-role-options', false);
+        $response = $this->get('/roles/'.$role->id.'/edit')->assertOk()
+            ->assertSee('aria-label="Opciones del rol"', false)
+            ->assertSee('data-dialog-template="delete-role-'.$role->id.'"', false)
+            ->assertSee('action="'.route('roles.destroy', $role).'"', false)
+            ->assertSee('Imprimir detalle')->assertSee('Eliminar rol')
+            ->assertDontSee($payload, false);
+
+        preg_match('/<template id="print-role-'.$role->id.'">(.*?)<\/template>/s', $response->getContent(), $matches);
+        $this->assertStringContainsString(e($payload), $matches[1]);
+        $this->assertStringContainsString(e($permission->name), $matches[1]);
+        $this->assertStringNotContainsString(e(Permission::where('code', 'access.roles.manage')->value('name')), $matches[1]);
+    }
+
+    #[TestWith(['empresas', 'company'])]
+    #[TestWith(['sucursales', 'branch'])]
+    #[TestWith(['usuarios', 'user'])]
+    #[TestWith(['roles', 'role'])]
+    #[TestWith(['estados', 'status'])]
+    #[TestWith(['menus', 'menu'])]
+    #[TestWith(['proveedores', 'supplier'])]
+    #[TestWith(['etapas-procesos', 'processStage'])]
+    public function test_options_are_in_edit_forms_and_print_escaped_saved_values(string $resource, string $key): void
+    {
+        $admin = $this->admin();
+        $record = $this->record($resource);
+        $payload = '<img src=x onerror=alert("registro")>';
+        $record->update(['name' => $payload]);
+
+        $listing = $this->actingAs($admin)->get('/'.$resource)->assertOk();
+        preg_match('/<table\b.*?<\/table>/s', $listing->getContent(), $table);
+        $this->assertStringNotContainsString('name="trash"', $table[0]);
+        $this->assertStringNotContainsString('data-dialog-template="delete-', $table[0]);
+        $this->assertStringNotContainsString('list-check', $table[0]);
+        $this->assertStringNotContainsString('/historial', $table[0]);
+        $this->assertStringNotContainsString('actions-column', $table[0]);
+
+        $response = $this->withSession(['_old_input' => ['name' => 'Cambio pendiente']])
+            ->followingRedirects()->get('/'.$resource.'/'.$record->id.'/edit')->assertOk()
+            ->assertSee('data-record-options', false)
+            ->assertSee('data-record-print="print-'.$key.'-'.$record->id.'"', false)
+            ->assertSee('data-dialog-target="record-confirm-dialog"', false)
+            ->assertDontSee($payload, false);
+
+        preg_match_all('/<details[^>]*data-record-options[^>]*>(.*?)<\/details>/s', $response->getContent(), $options);
+        $recordOptions = collect($options[1])->first(fn (string $html) => str_contains($html, 'data-record-print="print-'.$key.'-'.$record->id.'"'));
+        $this->assertNotNull($recordOptions);
+        $this->assertStringContainsString('href="'.route('records.history', ['resource' => $resource, 'record' => $record->id]).'">Ver historial</a>', $recordOptions);
+
+        preg_match('/<template id="print-'.$key.'-'.$record->id.'">(.*?)<\/template>/s', $response->getContent(), $print);
+        $this->assertStringContainsString(e($payload), $print[1]);
+        $this->assertStringNotContainsString('Cambio pendiente', $print[1]);
+        $this->assertStringNotContainsString('<input', $print[1]);
+        if ($record instanceof User) {
+            $this->assertStringNotContainsString($record->password, $print[1]);
+        }
+    }
+
+    public function test_own_account_cannot_open_record_options_or_delete_itself(): void
+    {
+        $this->admin();
+        $actor = $this->member($this->company(), ['access.users.manage']);
+
+        $this->actingAs($actor)->get('/usuarios')->assertOk()
+            ->assertDontSee('href="'.route('users.edit', $actor).'"', false);
+        $this->get('/usuarios/'.$actor->id.'/edit')->assertForbidden();
+        $this->deleteJson('/usuarios/'.$actor->id)->assertForbidden();
+        $this->assertNotSoftDeleted($actor);
     }
 
     #[TestWith(['empresas'])]

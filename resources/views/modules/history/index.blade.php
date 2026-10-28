@@ -19,7 +19,7 @@
 </x-list-filters>
 @fragment('list-results')
 <div data-list-results class="history-panel">
-    <x-record-history :record="$record" :resource="$resource" :entries="$entries" full />
+    <x-record-history :record="$record" :resource="$resource" :entries="$entries" :field-labels="$fieldLabels" full />
     <x-list-pagination :records="$entries" />
 </div>
 @endfragment

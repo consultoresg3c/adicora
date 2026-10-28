@@ -50,7 +50,7 @@ class CompanyController extends ManagementController
 
     public function edit(Request $request, Company $company): View
     {
-        return view('modules.companies.form', ['record' => $company->load('modules', 'recentActivities.actor')] + $this->options($request, 'companies'));
+        return view('modules.companies.form', ['record' => $company->load('modules', 'status', 'recentActivities.actor')] + $this->options($request, 'companies'));
     }
 
     public function update(CompanyRequest $request, Company $company, CompanyService $service): JsonResponse|RedirectResponse

@@ -54,7 +54,7 @@ class UserController extends ManagementController
         $this->assertTenant($request, $user);
         abort_unless($this->access->canManageGrants($request->user(), $user), 403);
 
-        return view('modules.users.form', ['record' => $user->load('roles', 'permissions', 'recentActivities.actor')] + $this->options($request, 'users', $user->company_id));
+        return view('modules.users.form', ['record' => $user->load('company', 'status', 'roles', 'permissions', 'recentActivities.actor')] + $this->options($request, 'users', $user->company_id));
     }
 
     public function update(UserRequest $request, User $user, UserService $service): JsonResponse|RedirectResponse

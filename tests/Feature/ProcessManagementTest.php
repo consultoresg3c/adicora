@@ -106,7 +106,7 @@ class ProcessManagementTest extends TestCase
         $request = PurchaseRequest::firstOrFail();
         $this->assertNull($request->currentStage->field_name);
         $this->assertSame($buyer->roles->first()->id, $request->currentStage->responsible_role_id);
-        $this->get('/compras/'.$request->id)->assertOk()->assertViewHas('editable', true)->assertViewHas('field', null)->assertSee('Esta etapa requiere revisar');
+        $this->get('/compras/'.$request->id)->assertOk()->assertViewHas('editable', true)->assertViewHas('fieldViews', fn ($fields) => ! $fields->contains('editable', true))->assertSee('Esta etapa requiere revisar');
         $this->putJson('/compras/'.$request->id, ['intent' => 'advance', 'version' => $request->version])->assertOk();
         $this->assertSame('approval_date', $request->fresh()->currentStage->field_name);
     }
@@ -142,8 +142,10 @@ class ProcessManagementTest extends TestCase
         $bad['responsible_role_id'] = Role::create(['name' => 'Rol global'])->id;
         $this->postJson('/procesos/'.$this->process->id.'/etapas', $bad)->assertUnprocessable()->assertJsonValidationErrors(['responsible_role_id', 'completion_status_id']);
         $bad = $this->stageData(1);
-        $this->postJson('/procesos/'.$this->process->id.'/etapas', $bad)->assertUnprocessable()->assertJsonValidationErrors('field_name');
-        $this->deleteJson('/procesos/'.$this->process->id.'/etapas/'.$rows[0]->id, ['version' => $this->process->version])->assertUnprocessable();
+        unset($bad['new_stage_name']);
+        $bad['process_stage_id'] = $rows[0]->process_stage_id;
+        $this->postJson('/procesos/'.$this->process->id.'/etapas', $bad)->assertUnprocessable()->assertJsonValidationErrors('process_stage_id');
+        $this->deleteJson('/procesos/'.$this->process->id.'/etapas/'.$rows[0]->id, ['version' => 0])->assertUnprocessable();
         $this->postJson('/procesos/'.$this->process->id.'/etapas', $this->stageData())->assertOk();
         $this->putJson('/procesos/'.$this->process->id, ['name' => 'Cambio obsoleto', 'version' => $this->process->version])->assertUnprocessable()->assertJsonValidationErrors('version');
         $this->assertSame('Compras', $this->process->fresh()->name);
@@ -160,6 +162,49 @@ class ProcessManagementTest extends TestCase
         $this->deleteJson('/procesos/'.$this->process->id, ['version' => $this->process->version])->assertForbidden();
     }
 
+    public function test_multiple_processes_in_one_company_keep_stages_fields_and_history_independent(): void
+    {
+        $originalRows = $this->process->stages()->get();
+        $originalFields = $this->process->fields()->pluck('id')->all();
+        $originalVersion = $this->process->version;
+        $originalHistory = $this->process->activities()->count();
+        $this->actingAs($this->admin)->postJson('/procesos', ['name' => 'Ventas', 'company_id' => $this->company->id])->assertOk();
+        $sales = ProcessDefinition::where('company_id', $this->company->id)->where('id', '!=', $this->process->id)->firstOrFail();
+        $this->assertSame(6, $sales->fields()->count());
+        $migration = require database_path('migrations/2026_10_26_000006_allow_multiple_processes_per_company.php');
+        try {
+            $migration->down();
+            $this->fail('La reversión no debe restablecer una restricción incompatible con los datos.');
+        } catch (\RuntimeException $error) {
+            $this->assertStringContainsString('varios procesos vigentes', $error->getMessage());
+        }
+        $this->assertSame([], array_intersect($originalFields, $sales->fields()->pluck('id')->all()));
+        $first = $originalRows[0];
+        $last = $originalRows[3];
+        foreach ([$first, $last] as $index => $source) {
+            $this->postJson('/procesos/'.$sales->id.'/etapas', [
+                'version' => $sales->fresh()->version, 'process_stage_id' => $source->process_stage_id,
+                'responsible_role_id' => $first->responsible_role_id, 'completion_status_id' => $source->completion_status_id,
+                'initial_status_id' => $index === 0 ? $first->initial_status_id : null,
+                'is_start' => $index === 0, 'is_end' => $index === 1, 'position' => $index + 1,
+            ])->assertOk();
+        }
+        $salesRows = $sales->stages()->get();
+        $this->assertSame([1, 2], $salesRows->pluck('position')->all());
+        $this->assertDatabaseHas('process_steps', ['process_definition_id' => $sales->id, 'origin_stage_id' => $first->process_stage_id, 'destination_stage_id' => $last->process_stage_id, 'deleted_at' => null]);
+        $this->get('/procesos?process_id='.$sales->id)->assertOk()->assertViewHas('records', fn ($records) => $records->total() === 2 && $records->every(fn ($row) => $row->process_definition_id === $sales->id));
+        $this->assertSame($originalRows->pluck('id')->all(), $this->process->stages()->pluck('id')->all());
+        $this->assertSame($originalVersion, $this->process->fresh()->version);
+        $this->assertSame($originalHistory, $this->process->activities()->count());
+        $this->putJson('/procesos/'.$sales->id.'/etapas/'.$first->id, $this->stageData())->assertNotFound();
+        $this->postJson('/procesos', ['name' => 'Empresa inválida', 'company_id' => 999999])->assertUnprocessable()->assertJsonValidationErrors('company_id');
+        app(PurchaseSetupService::class)->prepare($this->company->fresh(), $this->admin, 'Local.Process.Password!');
+        $this->assertSame(2, ProcessDefinition::where('company_id', $this->company->id)->count());
+        $this->assertSame($salesRows->pluck('id')->all(), $sales->stages()->pluck('id')->all());
+        $buyer = User::where('email', 'comprador@yraida.test')->firstOrFail();
+        $this->actingAs($buyer)->get('/compras/crear')->assertOk()->assertSee('Compras')->assertSee('Ventas');
+    }
+
     public function test_process_create_delete_name_noop_and_escaped_listing_fragment(): void
     {
         $company = Company::create(['name' => 'Segunda empresa', 'tax_id' => 'J-80000002', 'status_id' => $this->company->status_id]);
@@ -168,7 +213,8 @@ class ProcessManagementTest extends TestCase
         $this->get('/procesos?process_id='.$process->id)->assertSee('&lt;script&gt;', false)->assertDontSee('<script>alert', false);
         $this->putJson('/procesos/'.$process->id, ['name' => $process->name, 'version' => $process->version])->assertOk();
         $this->assertSame(1, $process->activities()->count());
-        $this->postJson('/procesos', ['name' => 'Duplicado', 'company_id' => $company->id])->assertUnprocessable()->assertJsonValidationErrors('company_id');
+        $this->postJson('/procesos', ['name' => 'Otro proceso', 'company_id' => $company->id])->assertOk();
+        $this->assertSame(2, ProcessDefinition::where('company_id', $company->id)->count());
         $row = $this->process->stages()->firstOrFail();
         $this->putJson('/procesos/'.$process->id.'/etapas/'.$row->id, $this->stageData())->assertNotFound();
         $this->deleteJson('/procesos/'.$process->id, ['version' => $process->version])->assertOk();

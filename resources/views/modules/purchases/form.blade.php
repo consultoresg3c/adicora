@@ -8,6 +8,12 @@
 @endsection
 @section('content')
 <section class="form-panel">
+    @if($record->exists)
+        <h2>{{ $record->name }}</h2>
+        <x-record-print :id="'print-purchase-'.$record->id" :title="$record->name" :fields="['Etapa actual' => $record->currentStage?->stage?->name, 'Estado' => $record->status?->name, 'Situación' => $record->completed_at ? 'Finalizada' : 'En curso']">
+            <dl>@foreach($fieldViews as $field)<dt>{{ $field['field']->name }}{{ $field['field']->attribute === 'amount' ? ' (USD)' : '' }}</dt><dd>{{ $field['display'] }}</dd>@endforeach</dl>
+        </x-record-print>
+    @endif
     <h2>{{ $record->currentStage?->stage?->name ?? 'Etapa no disponible' }}</h2>
     <p>{{ $record->completed_at ? 'Solicitud finalizada' : 'Solicitud en curso' }} @if($record->exists) · {{ $record->status?->name }} @endif</p>
 </section>
@@ -15,26 +21,25 @@
 <form class="form-panel" method="post" action="{{ $record->exists ? route('purchases.update', $record) : route('purchases.store') }}" data-async-form data-purchase-form novalidate>
 @csrf @if($record->exists) @method('PUT') <input type="hidden" name="version" value="{{ $record->version }}"> @endif
 <input type="hidden" name="intent" value="save">
+<input type="hidden" name="configuration_version" value="{{ $configurationVersion }}">
+@if(! $record->exists)<input type="hidden" name="start_stage_id" value="{{ $record->currentStage->id }}">@endif
 @else
 <section class="form-panel" aria-label="Datos de la solicitud">
 @endif
-@if($editable && $field === null)<p class="field-hint">Esta etapa requiere revisar los datos y confirmar el envío al siguiente responsable.</p>@endif
+
+@if($editable && ! $fieldViews->contains('editable', true))<p class="field-hint">Esta etapa requiere revisar los datos y confirmar el envío al siguiente responsable.</p>@endif
+<x-record-form-header>
+<x-slot:options>@if($record->exists)<x-record-options :history-url="route('records.history', ['resource' => 'solicitudes-compra', 'record' => $record->id])" :print-template="'print-purchase-'.$record->id" label="Opciones de la solicitud" />@endif</x-slot:options>
+
 <div class="form-grid">
-@if($field === 'purchase_date')
-    <x-select name="supplier_id" label="Proveedor" :options="$suppliers" :value="$record->supplier_id" :required="false" />
-    <x-field name="amount" label="Monto (USD)" type="number" :value="$record->amount" step="0.01" min="0.01" max="99999999999999.99" />
-@else
-    <div class="field"><span>Proveedor</span><p>{{ $record->supplier?->name ?? 'Sin proveedor' }}</p></div>
-    <div class="field"><span>Monto (USD)</span><p>{{ $record->amount === null ? 'Sin monto' : number_format((float) $record->amount, 2, '.', ',') }}</p></div>
-@endif
-@foreach(['purchase_date' => 'Fecha de compra', 'approval_date' => 'Fecha de aprobación', 'receipt_date' => 'Fecha de recepción', 'payment_date' => 'Fecha de pago'] as $dateField => $label)
-    @if($field === $dateField)
-        <x-field :name="$dateField" :label="$label" type="date" :value="$record->{$dateField}?->format('Y-m-d')" />
-    @else
-        <div class="field"><span>{{ $label }}</span><p>{{ $record->{$dateField}?->format('d/m/Y') ?? 'Pendiente' }}</p></div>
-    @endif
-@endforeach
+@foreach($fieldViews->take(2) as $item)@include('modules.purchases.partials.field')@endforeach
 </div>
+</x-record-form-header>
+@if($fieldViews->count() > 2)
+<div class="form-grid">
+@foreach($fieldViews->skip(2) as $item)@include('modules.purchases.partials.field')@endforeach
+</div>
+@endif
 @if($editable)
 <div class="form-feedback" data-form-feedback role="alert" tabindex="-1"></div>
 <div class="form-actions">
@@ -46,5 +51,5 @@
 @else
 </section>
 @endif
-@if($record->exists)<x-record-history :record="$record" resource="solicitudes-compra" />@endif
+@if($record->exists)<x-record-history :record="$record" resource="solicitudes-compra" :field-labels="$historyLabels" />@endif
 @endsection

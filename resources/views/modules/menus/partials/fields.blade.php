@@ -1,5 +1,8 @@
+<x-record-form-header>
+    <x-slot:options>@include('modules.menus.partials.record-options')</x-slot:options>
+    <x-field name="name" label="Nombre del menú" :value="$record->name" required maxlength="80" />
+</x-record-form-header>
 <div class="form-grid">
-    <div class="form-full"><x-field name="name" label="Nombre del menú" :value="$record->name" required maxlength="80" /></div>
     <div class="field">
         <label for="icon">Icono <span class="required-mark" aria-hidden="true">*</span></label>
         <div class="icon-picker-control"><span class="menu-icon-preview" data-icon-preview><x-icon :name="old('icon', $record->icon ?? 'layout-grid')" /></span><select name="icon" id="icon" required aria-describedby="icon-error" data-icon-select>

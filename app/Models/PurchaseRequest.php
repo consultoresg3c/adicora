@@ -72,4 +72,10 @@ class PurchaseRequest extends Model
     {
         return $this->activities()->latest('id')->limit(5);
     }
+
+    /** Valores de los campos personalizados, almacenados mediante FK de campo. */
+    public function customValues(): HasMany
+    {
+        return $this->hasMany(PurchaseFieldValue::class);
+    }
 }

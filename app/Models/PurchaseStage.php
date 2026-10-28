@@ -15,11 +15,13 @@ class PurchaseStage extends Model
     /** Nombres técnicos de campos del formulario; no son estados de negocio. */
     public const FIELDS = ['purchase_date', 'approval_date', 'receipt_date', 'payment_date'];
 
-    protected $fillable = ['process_definition_id', 'company_id', 'process_stage_id', 'responsible_role_id', 'completion_status_id', 'initial_status_id', 'field_name', 'position'];
+    protected $fillable = ['process_definition_id', 'company_id', 'process_stage_id', 'responsible_role_id', 'completion_status_id', 'initial_status_id', 'field_name', 'position', 'is_start', 'is_end', 'review_only'];
+
+    protected $attributes = ['is_start' => false, 'is_end' => false, 'review_only' => false];
 
     protected function casts(): array
     {
-        return ['process_definition_id' => 'integer', 'company_id' => 'integer', 'process_stage_id' => 'integer', 'responsible_role_id' => 'integer', 'completion_status_id' => 'integer', 'position' => 'integer'];
+        return ['process_definition_id' => 'integer', 'company_id' => 'integer', 'process_stage_id' => 'integer', 'responsible_role_id' => 'integer', 'completion_status_id' => 'integer', 'position' => 'integer', 'initial_status_id' => 'integer', 'is_start' => 'boolean', 'is_end' => 'boolean', 'review_only' => 'boolean'];
     }
 
     /** Etiqueta del registro en confirmaciones e historial. */
@@ -80,5 +82,11 @@ class PurchaseStage extends Model
     public function process(): BelongsTo
     {
         return $this->belongsTo(ProcessDefinition::class, 'process_definition_id');
+    }
+
+    /** Matriz de acceso a los campos de esta etapa. */
+    public function fieldRules(): HasMany
+    {
+        return $this->hasMany(ProcessStageField::class);
     }
 }

@@ -15,9 +15,10 @@ export function initializeForms(root = document) {
             feedback.textContent = '';
         });
 
+        const fieldKey = (name) => name.replace(/\[([^\]]*)\]/g, (_, key) => key ? `.${key}` : '');
         const errorNode = (field) =>
             [...form.querySelectorAll('[data-error]')].find(
-                (node) => node.dataset.error === field.name.replace(/\[\]$/, ''),
+                (node) => node.dataset.error === fieldKey(field.name),
             );
         const showError = (field, message) => {
             if (errorNode(field)) errorNode(field).textContent = message;
@@ -88,7 +89,7 @@ export function initializeForms(root = document) {
                 feedback.textContent = error.message;
                 for (const [name, messages] of Object.entries(error.errors ?? {})) {
                     const field = fields.find(
-                        (item) => item.name.replace(/\[\]$/, '') === name.split('.')[0],
+                        (item) => fieldKey(item.name) === name || (item.name.endsWith('[]') && fieldKey(item.name) === name.split('.')[0]),
                     );
                     if (field) showError(field, messages[0]);
                     else {

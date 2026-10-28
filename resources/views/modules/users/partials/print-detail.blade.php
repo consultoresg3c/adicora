@@ -1,0 +1,1 @@
+<x-record-print :id="'print-user-'.$record->id" :title="$record->name" :fields="['Registro' => $record->id, 'Empresa' => $record->company?->name ?? 'Sistema', 'Correo electrónico' => $record->email, 'Estado' => $record->status?->name, 'Roles' => $record->roles->pluck('name')->join(', '), 'Permisos directos' => $record->permissions->pluck('name')->join(', ')]" />

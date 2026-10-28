@@ -1,6 +1,11 @@
+<x-record-form-header>
+    <x-slot:options>@include('modules.companies.partials.record-options')</x-slot:options>
+    <div class="form-grid">
+        <x-field name="name" label="Nombre de la empresa" :value="$record->name" required maxlength="180" autocomplete="organization" />
+        <x-field name="tax_id" label="Identificación fiscal" :value="$record->tax_id" required maxlength="40" />
+    </div>
+</x-record-form-header>
 <div class="form-grid">
-    <x-field name="name" label="Nombre de la empresa" :value="$record->name" required maxlength="180" autocomplete="organization" />
-    <x-field name="tax_id" label="Identificación fiscal" :value="$record->tax_id" required maxlength="40" />
     <x-field name="email" label="Correo de contacto" type="email" :value="$record->email" maxlength="255" />
     <x-field name="phone" label="Teléfono" type="tel" :value="$record->phone" maxlength="40" />
     <div class="form-full"><x-field name="address" label="Dirección" :value="$record->address" maxlength="1000" /></div>

@@ -1,0 +1,1 @@
+<x-record-print :id="'print-company-'.$record->id" :title="$record->name" :fields="['Registro' => $record->id, 'Identificación fiscal' => $record->tax_id, 'Correo de contacto' => $record->email, 'Teléfono' => $record->phone, 'Dirección' => $record->address, 'Estado' => $record->status?->name, 'Módulos habilitados' => $record->modules->pluck('name')->join(', ')]" />

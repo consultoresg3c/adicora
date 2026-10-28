@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
-/** Proceso de compras identificado por nombre y empresa, con secuencia de etapas propia. */
+/** Proceso identificado por nombre y empresa, con secuencia de etapas propia. */
 class ProcessDefinition extends Model
 {
     use SoftDeletes;
@@ -32,7 +32,7 @@ class ProcessDefinition extends Model
         return $this->activities()->latest('id')->limit(5);
     }
 
-    /** Empresa propietaria de el proceso. */
+    /** Empresa propietaria del proceso. */
     public function company(): BelongsTo
     {
         return $this->belongsTo(Company::class);
@@ -59,5 +59,11 @@ class ProcessDefinition extends Model
     protected function casts(): array
     {
         return ['company_id' => 'integer', 'status_id' => 'integer', 'version' => 'integer'];
+    }
+
+    /** Campos vigentes del proceso en el orden de presentación. */
+    public function fields(): HasMany
+    {
+        return $this->hasMany(ProcessField::class)->orderBy('position')->orderBy('id');
     }
 }

@@ -1,0 +1,1 @@
+<x-record-print :id="'print-status-'.$record->id" :title="$record->name" :fields="['Registro' => $record->id, 'Módulo' => $record->type->name, 'Permite operar' => $record->is_active ? 'Sí' : 'No']" />

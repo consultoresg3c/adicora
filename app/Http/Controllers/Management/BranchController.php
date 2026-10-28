@@ -18,7 +18,7 @@ class BranchController extends ManagementController
     {
         $term = $request->searchTerm();
         $record = $request->filled('editar')
-            ? $this->access->scope(Branch::with('recentActivities.actor'), $request->user())->findOrFail($request->integer('editar'))
+            ? $this->access->scope(Branch::with('company', 'status', 'recentActivities.actor'), $request->user())->findOrFail($request->integer('editar'))
             : new Branch;
 
         $records = $this->access->scope(Branch::with('company', 'status', 'recentActivities.actor'), $request->user())

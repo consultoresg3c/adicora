@@ -7,6 +7,7 @@ use App\Models\Branch;
 use App\Models\Company;
 use App\Models\MenuItem;
 use App\Models\ProcessDefinition;
+use App\Models\ProcessField;
 use App\Models\ProcessStage;
 use App\Models\ProcessStep;
 use App\Models\PurchaseRequest;
@@ -16,6 +17,7 @@ use App\Models\Status;
 use App\Models\Supplier;
 use App\Models\User;
 use App\Services\Purchases\PurchaseAccessService;
+use App\Services\Purchases\PurchaseFieldService;
 use App\Support\ListingResponse;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\JsonResponse;
@@ -30,6 +32,7 @@ class RecordHistoryController extends ManagementController
         'usuarios' => [User::class, 'access.users.manage', 'users.index'],
         'roles' => [Role::class, 'access.roles.manage', 'roles.index'],
         'estados' => [Status::class, 'system.statuses.manage', 'statuses.index'],
+        'campos-procesos' => [ProcessField::class, 'system.processes.manage', 'processes.index'],
         'flujos-procesos' => [ProcessDefinition::class, 'system.processes.manage', 'processes.index'],
         'etapas-compras' => [PurchaseStage::class, 'system.processes.manage', 'processes.index'],
         'procesos' => [ProcessStep::class, 'system.processes.manage', 'processes.index'],
@@ -62,7 +65,15 @@ class RecordHistoryController extends ManagementController
             ->when($request->filled('action'), fn ($query) => $query->where('action', $request->string('action')->toString()))
             ->orderByDesc('id')->paginate($request->perPage())->withQueryString();
 
+        $fieldLabels = [];
+        if ($subject instanceof PurchaseRequest) {
+            $fields = app(PurchaseFieldService::class);
+            $entries->setCollection($fields->redactHistory($entries->getCollection(), $subject->currentStage));
+            $fieldLabels = $fields->historyLabels($subject->currentStage);
+        }
+
         return ListingResponse::view('modules.history.index', [
+            'fieldLabels' => $fieldLabels,
             'record' => $subject,
             'resource' => $resource,
             'title' => 'Historial de '.$subject->name,

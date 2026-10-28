@@ -41,7 +41,7 @@ export function initializeDialogs(root = document) {
     root.addEventListener('click', (event) => {
         const trigger = event.target.closest('[data-dialog-template]');
         if (!trigger || event.defaultPrevented || event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
-        const dialog = root.querySelector('#record-dialog');
+        const dialog = document.getElementById(trigger.dataset.dialogTarget ?? 'record-dialog');
         if (!dialog || !mountTemplate(dialog, trigger.dataset.dialogTemplate)) return;
         event.preventDefault();
         openDialog(dialog, { keyboard: event.detail === 0 });

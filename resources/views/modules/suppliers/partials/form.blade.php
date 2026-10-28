@@ -7,3 +7,8 @@
 @if($record->exists)
     <x-record-history :record="$record" resource="proveedores" />
 @endif
+@if($record->exists)
+    <template id="delete-supplier-{{ $record->id }}" data-dialog-title="Eliminar proveedor">
+        @include('modules.suppliers.partials.delete-form')
+    </template>
+@endif

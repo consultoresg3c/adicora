@@ -7,6 +7,7 @@ use App\Models\Branch;
 use App\Models\Company;
 use App\Models\MenuItem;
 use App\Models\ProcessDefinition;
+use App\Models\ProcessField;
 use App\Models\ProcessStage;
 use App\Models\ProcessStep;
 use App\Models\PurchaseRequest;
@@ -27,9 +28,10 @@ class RecordHistoryService
         }
 
         $fields = match (true) {
+            $record instanceof ProcessField => ['company_id', 'process_definition_id', 'name', 'data_type', 'text_length', 'decimal_places', 'position'],
             $record instanceof ProcessDefinition => ['company_id', 'name', 'status_id'],
             $record instanceof Supplier => ['company_id', 'name', 'status_id'],
-            $record instanceof PurchaseStage => ['process_definition_id', 'company_id', 'process_stage_id', 'responsible_role_id', 'completion_status_id', 'initial_status_id', 'field_name', 'position'],
+            $record instanceof PurchaseStage => ['process_definition_id', 'company_id', 'process_stage_id', 'responsible_role_id', 'completion_status_id', 'initial_status_id', 'field_name', 'position', 'is_start', 'is_end', 'review_only'],
             $record instanceof PurchaseRequest => ['company_id', 'created_by_id', 'supplier_id', 'purchase_stage_id', 'status_id', 'amount', 'currency', 'purchase_date', 'approval_date', 'receipt_date', 'payment_date', 'completed_at'],
             $record instanceof ProcessStage => ['name', 'status_id'],
             $record instanceof ProcessStep => ['process_definition_id', 'origin_stage_id', 'destination_stage_id', 'responsible_role_id', 'status_id'],
@@ -55,7 +57,14 @@ class RecordHistoryService
             }
         }
         $snapshot['lifecycle_status'] = $record->lifecycle_status;
+        if ($record instanceof PurchaseStage) {
+            $snapshot['field_rules'] = $record->fieldRules()->whereHas('field')->orderBy('process_field_id')->get(['process_field_id', 'mode', 'is_required'])->map(fn ($rule) => $rule->only(['process_field_id', 'mode', 'is_required']))->all();
+        }
+        if ($record instanceof PurchaseRequest) {
+            $snapshot['field_values'] = $record->customValues()->orderBy('process_field_id')->pluck('value', 'process_field_id')->all();
+        }
         if ($record instanceof ProcessDefinition) {
+            $snapshot['field_ids'] = $record->fields()->pluck('id')->all();
             $snapshot['stage_ids'] = $record->stages()->pluck('id')->all();
         }
         if ($record instanceof Company) {
@@ -91,6 +100,7 @@ class RecordHistoryService
         }
 
         $subjectKey = match (true) {
+            $record instanceof ProcessField => 'process_field_id',
             $record instanceof ProcessDefinition => 'process_definition_id',
             $record instanceof Supplier => 'supplier_id',
             $record instanceof PurchaseStage => 'purchase_stage_id',

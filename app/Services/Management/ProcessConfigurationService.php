@@ -38,23 +38,40 @@ class ProcessConfigurationService
                 $process->version++;
             }
             $process->save();
+            if ($creating) {
+                app(ProcessFieldService::class)->ensureBuiltins($process, $actor);
+            }
             $this->history->record($process, $actor, $creating ? 'created' : 'updated', $before);
 
             return $process;
         });
     }
 
-    public function saveStage(ProcessDefinition $process, ?PurchaseStage $record, array $data, User $actor): void
+    public function saveStage(ProcessDefinition $process, ?PurchaseStage $record, array $data, User $actor): PurchaseStage
     {
         abort_unless($actor->can('system.processes.manage'), 403);
-        DB::transaction(function () use ($process, $record, $data, $actor): void {
+
+        return DB::transaction(function () use ($process, $record, $data, $actor): PurchaseStage {
             $process = $this->lock($process, (int) $data['version']);
-            $this->assertEditable($process);
             $processBefore = $this->history->snapshot($process);
             $rows = $process->stages()->lockForUpdate()->get();
             if ($record) {
                 $record = $rows->firstWhere('id', $record->id);
                 abort_unless($record, 404);
+            }
+            if (! $record) {
+                $this->assertEditable($process);
+            } else {
+                $structural = ['process_stage_id', 'responsible_role_id', 'completion_status_id', 'initial_status_id', 'position', 'is_start', 'is_end'];
+                $changed = ! empty($data['new_stage_name']);
+                foreach ($structural as $field) {
+                    if (array_key_exists($field, $data) && (in_array($field, ['is_start', 'is_end'], true) ? (bool) $record->{$field} !== (bool) $data[$field] : (string) $record->{$field} !== (string) $data[$field])) {
+                        $changed = true;
+                    }
+                }
+                if ($changed) {
+                    $this->assertEditable($process);
+                }
             }
             $record ??= new PurchaseStage(['company_id' => $process->company_id, 'process_definition_id' => $process->id]);
             $snapshots = $rows->mapWithKeys(fn ($row) => [$row->id => $this->history->snapshot($row)])->all();
@@ -65,16 +82,18 @@ class ProcessConfigurationService
             $stage = ! empty($data['new_stage_name'])
                 ? app(ProcessStageService::class)->save(new ProcessStage, ['name' => $data['new_stage_name'], 'status_id' => Status::whereHas('type', fn ($query) => $query->where('code', 'process_stages'))->where('is_active', true)->firstOrFail()->id], $actor)
                 : ProcessStage::lockForUpdate()->findOrFail($data['process_stage_id']);
-            $record->fill(['process_stage_id' => $stage->id, 'responsible_role_id' => $role->id, 'completion_status_id' => $data['completion_status_id'], 'field_name' => $data['field_name'] ?? null]);
+            $record->fill(['process_stage_id' => $stage->id, 'responsible_role_id' => $role->id, 'completion_status_id' => $data['completion_status_id'], 'review_only' => (bool) ($data['review_only'] ?? $record->review_only), 'is_start' => (bool) ($data['is_start'] ?? $record->is_start), 'is_end' => (bool) ($data['is_end'] ?? $record->is_end)]);
+            $record->initial_status_id = $record->is_start ? ($data['initial_status_id'] ?? $record->initial_status_id) : null;
             $record->unsetRelation('stage');
             $rows = $rows->reject(fn ($row) => $record->exists && $row->id === $record->id)->values();
             $position = (int) $data['position'];
             if ($position < 1 || $position > $rows->count() + 1 || $rows->count() >= 500) {
                 throw ValidationException::withMessages(['position' => 'Selecciona una posición válida dentro de la secuencia.']);
             }
-            $initial = $rows->first()?->initial_status_id ?? $record->initial_status_id ?? ($data['initial_status_id'] ?? null);
             $rows->splice($position - 1, 0, [$record]);
-            $this->persistSequence($process, $rows, $snapshots, $initial, $actor, $processBefore);
+            $this->persistSequence($process, $rows, $snapshots, $actor, $processBefore, $record, $data);
+
+            return $record;
         });
     }
 
@@ -88,13 +107,12 @@ class ProcessConfigurationService
             $rows = $process->stages()->lockForUpdate()->get();
             $record = $rows->firstWhere('id', $record->id);
             abort_unless($record, 404);
-            $initial = $rows->first()?->initial_status_id;
             $snapshots = $rows->mapWithKeys(fn ($row) => [$row->id => $this->history->snapshot($row)])->all();
             $rows = $rows->reject(fn ($row) => $row->id === $record->id)->values();
-            $this->validateSequence($rows, $initial);
+            $this->validateSequence($rows);
             $record->delete();
             $this->history->record($record, $actor, 'deleted', $snapshots[$record->id]);
-            $this->persistSequence($process, $rows, $snapshots, $initial, $actor, $processBefore);
+            $this->persistSequence($process, $rows, $snapshots, $actor, $processBefore);
         });
     }
 
@@ -130,40 +148,39 @@ class ProcessConfigurationService
         }
     }
 
-    private function validateSequence(Collection $rows, ?int $initial): void
+    private function validateSequence(Collection $rows): void
     {
         if ($rows->isEmpty()) {
             return;
         }
-        if ($rows->first()->field_name !== 'purchase_date' || ! $initial) {
-            throw ValidationException::withMessages(['field_name' => 'La primera etapa debe capturar los datos de compra y tener estatus inicial.']);
+        if ($rows->contains(fn ($row) => $row->is_start && ! $row->initial_status_id)) {
+            throw ValidationException::withMessages(['initial_status_id' => 'Selecciona el estatus inicial de cada etapa que inicia el proceso.']);
         }
         if ($rows->pluck('process_stage_id')->unique()->count() !== $rows->count()) {
             throw ValidationException::withMessages(['process_stage_id' => 'Una etapa no puede aparecer dos veces en el mismo proceso.']);
         }
-        $fields = $rows->pluck('field_name')->filter()->values();
-        $order = $fields->map(fn ($field) => array_search($field, PurchaseStage::FIELDS, true));
-        if ($fields->unique()->count() !== $fields->count() || $order->sort()->values()->all() !== $order->all()) {
-            throw ValidationException::withMessages(['field_name' => 'Los datos de compra, aprobación, recepción y pago no se repiten y conservan ese orden. Las revisiones pueden insertarse entre ellos.']);
-        }
+
     }
 
-    private function persistSequence(ProcessDefinition $process, Collection $rows, array $snapshots, ?int $initial, User $actor, array $processBefore): void
+    private function persistSequence(ProcessDefinition $process, Collection $rows, array $snapshots, User $actor, array $processBefore, ?PurchaseStage $configured = null, array $data = []): void
     {
-        $this->validateSequence($rows, $initial);
+        $this->validateSequence($rows);
         // Posiciones temporales dentro de la misma transacción para respetar el índice único.
         $process->stages()->update(['position' => DB::raw('position + 10000')]);
         foreach ($rows as $index => $row) {
-            $creating = ! $row->exists;
-            $before = $snapshots[$row->id] ?? [];
             if ($row->exists) {
                 $row->position = $row->getOriginal('position') + 10000;
                 $row->syncOriginalAttribute('position');
             }
             $row->position = $index + 1;
-            $row->initial_status_id = $index === 0 ? $initial : null;
             $row->save();
-            $this->history->record($row, $actor, $creating ? 'created' : 'updated', $before);
+            if ($configured === $row) {
+                app(ProcessFieldService::class)->saveRules($row, $data, $actor);
+            }
+        }
+        foreach ($rows as $row) {
+            $before = $snapshots[$row->id] ?? [];
+            $this->history->record($row, $actor, $before === [] ? 'created' : 'updated', $before);
         }
         $this->syncSteps($process, $rows, $actor);
         $process->version++;
@@ -178,6 +195,9 @@ class ProcessConfigurationService
         $kept = [];
         $statusId = Status::whereHas('type', fn ($query) => $query->where('code', 'processes'))->where('is_active', true)->firstOrFail()->id;
         foreach ($rows->slice(0, max(0, $rows->count() - 1)) as $index => $row) {
+            if ($row->is_end) {
+                continue;
+            }
             $next = $rows[$index + 1];
             $edge = $edges->firstWhere('origin_stage_id', $row->process_stage_id) ?? new ProcessStep;
             $creating = ! $edge->exists;

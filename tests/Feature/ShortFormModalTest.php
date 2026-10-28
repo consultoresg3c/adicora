@@ -64,6 +64,7 @@ class ShortFormModalTest extends TestCase
             ->assertSee('data-dialog-template="edit-status-'.$status->id.'"', false)
             ->assertSee('name="name"', false)->assertSee('name="status_type_id"', false)
             ->assertSee('&lt;script&gt;', false)->assertDontSee('<script>alert("estado")</script>', false)
+            ->assertSee('aria-label="Editar estado '.e($status->name).' de '.e($status->type->name).'">'.e($status->name).'</a>', false)
             ->assertDontSee('data-record=', false)->assertDontSee('data-create-record=', false)
             ->assertDontSee('data-remote-dialog', false);
 

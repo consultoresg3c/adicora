@@ -7,3 +7,8 @@
 @if($record->exists)
     <x-record-history :record="$record" resource="sucursales" />
 @endif
+@if($record->exists)
+    <template id="delete-branch-{{ $record->id }}" data-dialog-title="Eliminar sucursal">
+        @include('modules.branches.partials.delete-form')
+    </template>
+@endif

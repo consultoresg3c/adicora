@@ -31,38 +31,19 @@
     <div class="table-panel">
     @if($records->isEmpty())<x-empty-state title="No hay usuarios para mostrar" description="Crea una cuenta o ajusta la búsqueda y los filtros para encontrar otros resultados." />
     @else
-    <div class="table-scroll"><table><caption class="sr-only">Usuarios registrados</caption><thead><tr><th>Usuario</th><th>Empresa</th><th>Roles</th><th>Estado</th><th class="actions-column"><span class="sr-only">Acciones</span></th></tr></thead><tbody>
+    <div class="table-scroll"><table><caption class="sr-only">Usuarios registrados</caption><thead><tr><th>Usuario</th><th>Empresa</th><th>Roles</th><th>Estado</th></tr></thead><tbody>
         @foreach($records as $item)
             <tr>
-                <td><strong>{{ $item->name }}</strong><span class="table-secondary">{{ $item->email }}</span></td>
+                <td>@if($item->can_manage)<a class="row-action" href="{{ route('users.edit', $item) }}" aria-label="Editar {{ $item->name }}">{{ $item->name }}</a>@else<strong>{{ $item->name }}</strong><span class="table-secondary">Protegido</span>@endif<span class="table-secondary">{{ $item->email }}</span></td>
                 <td>{{ $item->company?->name ?? 'Sistema' }}</td>
                 <td>{{ $item->is_super_admin ? 'Superadministrador' : ($item->roles->pluck('name')->join(', ') ?: 'Sin rol') }}</td>
                 <td><x-status-badge :status="$item->status" /></td>
-                <td class="actions-column">
-                    @if($item->can_manage)
-                        <div class="row-actions">
-                            <a class="button button-quiet icon-button" href="{{ route('records.history', ['resource' => 'usuarios', 'record' => $item->id]) }}" aria-label="Historial de {{ $item->name }}" title="Ver historial"><x-icon name="list-check" size="18" /></a>
-                            <a class="button button-quiet icon-button" href="{{ route('users.edit', $item) }}" aria-label="Editar {{ $item->name }}" title="Editar usuario"><x-icon name="pencil" size="18" /></a>
-                            @if(! $item->is_super_admin && $item->id !== auth()->id())
-                                <button class="button button-quiet icon-button button-danger" type="button" data-dialog-template="delete-user-{{ $item->id }}" aria-label="Eliminar {{ $item->name }}" title="Eliminar usuario"><x-icon name="trash" size="18" /></button>
-                            @endif
-                        </div>
-                    @else<span class="table-secondary">Protegido</span>@endif
-                </td>
             </tr>
         @endforeach
     </tbody></table></div>
     @endif
     <x-list-pagination :records="$records" />
     </div>
-    @foreach($records as $item)
-        @if($item->can_manage && ! $item->is_super_admin && $item->id !== auth()->id())
-            <template id="delete-user-{{ $item->id }}" data-dialog-title="Eliminar usuario">
-                @include('modules.users.partials.delete-form', ['record' => $item])
-            </template>
-        @endif
-    @endforeach
     </div>
     @endfragment
-<x-record-dialog title="Eliminar usuario" />
 @endsection

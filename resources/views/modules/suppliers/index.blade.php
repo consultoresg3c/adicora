@@ -17,19 +17,12 @@
 <div class="table-panel">
     @if($records->isEmpty())<x-empty-state title="No se encontraron proveedores" description="Revisa los filtros o registra una nuevo proveedor." />
     @else
-    <div class="table-scroll"><table><caption class="sr-only">Proveedores registrados</caption><thead><tr><th>Proveedor</th><th>Empresa</th><th>Estado</th><th class="actions-column"><span class="sr-only">Acciones</span></th></tr></thead><tbody>
+    <div class="table-scroll"><table><caption class="sr-only">Proveedores registrados</caption><thead><tr><th>Proveedor</th><th>Empresa</th><th>Estado</th></tr></thead><tbody>
         @foreach($records as $item)
             <tr>
-                <td><strong>{{ $item->name }}</strong></td>
+                <td><a class="row-action" href="{{ route('suppliers.edit', $item) }}" data-dialog-template="edit-supplier-{{ $item->id }}" aria-label="Editar {{ $item->name }}">{{ $item->name }}</a></td>
                 <td>{{ $item->company->name }}</td>
                 <td><x-status-badge :status="$item->status" /></td>
-                <td class="actions-column">
-                    <div class="row-actions">
-                        <a class="button button-quiet icon-button" href="{{ route('records.history', ['resource' => 'proveedores', 'record' => $item->id]) }}" aria-label="Historial de {{ $item->name }}" title="Ver historial"><x-icon name="list-check" size="18" /></a>
-                        <a class="button button-quiet icon-button" href="{{ route('suppliers.edit', $item) }}" data-dialog-template="edit-supplier-{{ $item->id }}" aria-label="Editar {{ $item->name }}" title="Editar proveedor"><x-icon name="pencil" size="18" /></a>
-                        <button class="button button-quiet icon-button button-danger" type="button" data-dialog-template="delete-supplier-{{ $item->id }}" aria-label="Eliminar {{ $item->name }}" title="Eliminar proveedor"><x-icon name="trash" size="18" /></button>
-                    </div>
-                </td>
             </tr>
         @endforeach
     </tbody></table></div>
@@ -39,9 +32,6 @@
 @foreach($records as $item)
     <template id="edit-supplier-{{ $item->id }}" data-dialog-title="Editar proveedor">
         @include('modules.suppliers.partials.form', ['record' => $item])
-    </template>
-    <template id="delete-supplier-{{ $item->id }}" data-dialog-title="Eliminar proveedor">
-        @include('modules.suppliers.partials.delete-form', ['record' => $item])
     </template>
 @endforeach
 @if($record->exists && ! $records->getCollection()->contains('id', $record->id))
